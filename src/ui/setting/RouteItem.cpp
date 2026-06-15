@@ -1,6 +1,6 @@
 #include "include/ui/setting/RouteItem.h"
-#include "include/api/RPC.h"
 #include "include/database/ProfilesRepo.h"
+#include "include/database/GroupsRepo.h"
 #include "include/global/Configs.hpp"
 
 #include <QMessageBox>
@@ -312,16 +312,24 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
     }
 
     outbounds = {"proxy", "direct"};
-    auto outboundIdNamePairs = Configs::dataManager->profilesRepo->GetAllProfileIDNameMapped();
     outboundMap[0] = -1;
     outboundMap[1] = -2;
-    for (const auto& item: outboundIdNamePairs) {
-        outboundMap[outboundMap.size()] = item.first;
-        outbounds << item.second;
+    auto proxyListRaw = Configs::dataManager->profilesRepo->GetAllProfileIDNameMapped();
+    QMap<int, QString> idToName;
+    for (const auto& [id, name] : proxyListRaw) idToName.insert(id, name);
+    auto groupIDs = Configs::dataManager->groupsRepo->GetGroupsTabOrder();
+    for (auto groupID : groupIDs) {
+        auto group = Configs::dataManager->groupsRepo->GetGroup(groupID);
+        if (!group) continue;
+        for (int profileID : group->profiles) {
+            if (!idToName.contains(profileID)) continue;
+            outboundMap[outboundMap.size()] = profileID;
+            outbounds << QString("[" + group->name + "] ") + idToName[profileID];
+        }
     }
 
-    for (const auto& item : ruleSetMap) {
-        geo_items.append(QString::fromStdString(item.first));
+    for (const auto& item : ruleSetList) {
+        geo_items.append(QString::fromUtf8(item.first.data(), item.first.size()));
     }
 
     ui->route_name->setText(chain->name);
@@ -350,8 +358,8 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
     ui->def_out->setCurrentText(Configs::outboundIDToString(chain->defaultOutboundID));
 
     QStringList ruleItems = {"domain:", "suffix:", "regex:", "keyword:", "ip:", "processName:", "processPath:", "ruleset:"};
-    for (const auto& item : ruleSetMap) {
-        ruleItems.append("ruleset:" + QString::fromStdString(item.first));
+    for (const auto& item : ruleSetList) {
+        ruleItems.append("ruleset:" + QString::fromUtf8(item.first.data(), item.first.size()));
     }
     simpleDirect = new AutoCompleteTextEdit("", ruleItems, this);
     simpleBlock = new AutoCompleteTextEdit("", ruleItems, this);
@@ -423,28 +431,28 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
     enhanced_block_process_highlighter = new RouteRuleHighlighter(enhanced_block_process->document(), false);
     enhanced_block_ruleset_highlighter = new RouteRuleHighlighter(enhanced_block_ruleset->document(), false);
 
-    simpleDirect->setPlainText(chain->GetSimpleRules(Configs::direct));
+    simpleDirect->setPlainText(chain->GetSimpleRules(Configs::bypass));
     simpleBlock->setPlainText(chain->GetSimpleRules(Configs::block));
     simpleProxy->setPlainText(chain->GetSimpleRules(Configs::proxy));
 
     // Инициализация Enhanced Basic полей - фильтруем текст из Basic для отображения
     // IPs: только ip: и ruleset:geoip-*
-    enhanced_direct_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::block)));
 
     // Domains: domain, suffix, keyword, regex, ruleset:geosite-*
-    enhanced_direct_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::block)));
 
     // Processes: processName: и processPath:
-    enhanced_direct_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::block)));
 
     // Rulesets: все ruleset URI (кроме geoip- и geosite- которые идут в IP/Domains)
-    enhanced_direct_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::block)));
     
@@ -452,7 +460,7 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
     connect(ui->tabWidget->tabBar(), &QTabBar::currentChanged, this, [=, this]() {
         if (ui->tabWidget->tabBar()->currentIndex() == 1) {
             QString res;
-            res += chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::direct);
+            res += chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::bypass);
             res += chain->UpdateSimpleRules(simpleBlock->toPlainText(), Configs::block);
             res += chain->UpdateSimpleRules(simpleProxy->toPlainText(), Configs::proxy);
             if (!res.isEmpty()) {
@@ -470,7 +478,7 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
                 persistCurrentRuleAttrTabLabel();
             updateRouteItemsView();
             updateRuleSection();
-            simpleDirect->setPlainText(chain->GetSimpleRules(Configs::direct));
+            simpleDirect->setPlainText(chain->GetSimpleRules(Configs::bypass));
             simpleBlock->setPlainText(chain->GetSimpleRules(Configs::block));
             simpleProxy->setPlainText(chain->GetSimpleRules(Configs::proxy));
         }
@@ -516,12 +524,12 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
             // Сначала собираем данные с ТЕКУЩЕЙ вкладки перед переходом
             if (lastTabIndex == 0) {
                 // С Basic - обновляем цепь из Basic
-                chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::direct);
+                chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::bypass);
                 chain->UpdateSimpleRules(simpleBlock->toPlainText(), Configs::block);
                 chain->UpdateSimpleRules(simpleProxy->toPlainText(), Configs::proxy);
             } else if (lastTabIndex == 1) {
                 // С Basic+ - обновляем цепь из Enhanced
-                updateChainFromEnhanced(Configs::direct);
+                updateChainFromEnhanced(Configs::bypass);
                 updateChainFromEnhanced(Configs::proxy);
                 updateChainFromEnhanced(Configs::block);
             }
@@ -533,7 +541,7 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
         else if (currentIdx == 1)  // Переход НА Basic+ - сохраняем Basic и загружаем Enhanced
         {
             // Сохраняем Basic в цепь
-            chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::direct);
+            chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::bypass);
             chain->UpdateSimpleRules(simpleBlock->toPlainText(), Configs::block);
             chain->UpdateSimpleRules(simpleProxy->toPlainText(), Configs::proxy);
 
@@ -544,13 +552,13 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
         {
             if (lastTabIndex == 1) {
                 // Сохраняем Enhanced в цепь перед переходом
-                updateChainFromEnhanced(Configs::direct);
+                updateChainFromEnhanced(Configs::bypass);
                 updateChainFromEnhanced(Configs::proxy);
                 updateChainFromEnhanced(Configs::block);
             }
 
             // Обновляем Basic из цепи
-            simpleDirect->setPlainText(chain->GetSimpleRules(Configs::direct));
+            simpleDirect->setPlainText(chain->GetSimpleRules(Configs::bypass));
             simpleBlock->setPlainText(chain->GetSimpleRules(Configs::block));
             simpleProxy->setPlainText(chain->GetSimpleRules(Configs::proxy));
         }
@@ -696,7 +704,7 @@ QString RouteItem::updateChainFromEnhanced(Configs::simpleAction action)
     // Определяем, какие Enhanced поля соответствуют заданному действию
     switch (action)
     {
-    case Configs::direct:
+    case Configs::bypass:
         ipField = enhanced_direct_ip;
         domainField = enhanced_direct_domain;
         processField = enhanced_direct_process;
@@ -813,7 +821,7 @@ QString RouteItem::collectEnhancedToSimple()
     // Собирает данные из всех 9 Enhanced Basic полей и обновляет chain
     // Возвращает агрегированную строку с ошибками
     QString errors;
-    errors += updateChainFromEnhanced(Configs::direct);
+    errors += updateChainFromEnhanced(Configs::bypass);
     errors += updateChainFromEnhanced(Configs::proxy);
     errors += updateChainFromEnhanced(Configs::block);
     return errors;
@@ -838,19 +846,19 @@ void RouteItem::refreshEnhancedFromChain()
     QSignalBlocker b11(enhanced_block_process);
     QSignalBlocker b12(enhanced_block_ruleset);
 
-    enhanced_direct_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_ip->setPlainText(filterIPs(chain->GetSimpleRules(Configs::block)));
 
-    enhanced_direct_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_domain->setPlainText(filterDomains(chain->GetSimpleRules(Configs::block)));
 
-    enhanced_direct_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_process->setPlainText(filterProcesses(chain->GetSimpleRules(Configs::block)));
 
-    enhanced_direct_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::direct)));
+    enhanced_direct_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::bypass)));
     enhanced_proxy_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::proxy)));
     enhanced_block_ruleset->setPlainText(filterRulesets(chain->GetSimpleRules(Configs::block)));
 }
@@ -865,18 +873,27 @@ void RouteItem::accept() {
         return;
     }
 
+	QString res;
     // Сначала СИНХРОНИЗИРУЕМ вкладки чтобы они имели одинаковые данные
     int currentTab = ui->tabWidget->tabBar()->currentIndex();
 
     if (currentTab == 0) {
         // Активна Basic - обновляем Enhanced из Basic через цепь
-        chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::direct);
-        chain->UpdateSimpleRules(simpleBlock->toPlainText(), Configs::block);
-        chain->UpdateSimpleRules(simpleProxy->toPlainText(), Configs::proxy);
+        res += chain->UpdateSimpleRules(simpleDirect->toPlainText(), Configs::bypass);
+        res += chain->UpdateSimpleRules(simpleBlock->toPlainText(), Configs::block);
+        res += chain->UpdateSimpleRules(simpleProxy->toPlainText(), Configs::proxy);
+        
+        if (!res.isEmpty()) {
+        	runOnUiThread([=] {
+            	MessageBoxWarning(tr("Invalid rules"), tr("Some rules could not be added, fix them before saving:\n") + res);
+        	});
+        	return;
+    	}
+        
         // Enhanced теперь прочитает из цепи при следующем refreshEnhancedFromChain()
     } else {
         // Активна Basic+ - обновляем Basic из Enhanced через цепь
-        updateChainFromEnhanced(Configs::direct);
+        updateChainFromEnhanced(Configs::bypass);
         updateChainFromEnhanced(Configs::proxy);
         updateChainFromEnhanced(Configs::block);
         // Basic теперь прочитает из цепи

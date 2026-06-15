@@ -562,6 +562,7 @@ namespace Configs {
         QList<std::shared_ptr<RouteProfile>> routeProfiles;
         std::map<int, std::shared_ptr<RouteProfile>> byId;
         QList<int> idsInOrder;
+        QSet<int> cachedProfiles;
 
         auto profileQuery = db.query("SELECT id, name, default_outbound_id, simple_rules_direct, simple_rules_proxy, simple_rules_block FROM route_profiles ORDER BY id");
         if (!profileQuery) return routeProfiles;
@@ -575,6 +576,7 @@ namespace Configs {
                 if (auto shared = it->second.lock()) {
                     byId[id] = shared;
                     idsInOrder.append(id);
+                    cachedProfiles.insert(id);
                     continue;
                 }
                 identityMap.erase(it);
@@ -590,7 +592,10 @@ namespace Configs {
         for (int off = 0; off < idsInOrder.size(); off += Configs::BATCH_LIMIT_READ) {
             int end = std::min(off + Configs::BATCH_LIMIT_READ, static_cast<int>(idsInOrder.size()));
             QList<int> chunk;
-            for (int i = off; i < end; ++i) chunk.append(idsInOrder[i]);
+            for (int i = off; i < end; ++i) {
+                if (!cachedProfiles.contains(idsInOrder[i])) chunk.append(idsInOrder[i]);
+            }
+            if (chunk.isEmpty()) continue;
             loadRulesForProfileIdsChunk(chunk, byId);
         }
         

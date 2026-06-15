@@ -6,9 +6,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if (NOT APPLE)
-    set(CMAKE_UNITY_BUILD_BATCH_SIZE 32)
-endif ()
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
@@ -105,6 +102,9 @@ set(PROJECT_SOURCES
         include/sys/Process.hpp
         src/sys/Process.cpp
 
+        include/sys/UrlScheme.hpp
+        src/sys/UrlScheme.cpp
+
         include/ui/setting/ThemeManager.hpp
         src/ui/setting/ThemeManager.cpp
         src/ui/setting/Icon.cpp
@@ -125,6 +125,7 @@ set(PROJECT_SOURCES
 
         include/ui/profile/dialog_edit_profile.h
         src/ui/profile/dialog_edit_profile.cpp
+        src/ui/profile/dialog_edit_profile_xhttp.cpp
         include/ui/profile/dialog_edit_profile.ui
         include/ui/group/dialog_edit_group.h
         src/ui/group/dialog_edit_group.cpp
@@ -223,6 +224,7 @@ set(PROJECT_SOURCES
         res/Throne.qrc
         ${QV2RAY_RC}
         res/darkstyle.qrc
+        res/theme/feiyangqingyun/qss.qrc
         res/opusfusion.qrc
         src/ui/profile/edit_ssh.cpp
         include/ui/profile/edit_ssh.h
@@ -317,6 +319,10 @@ set(PROJECT_SOURCES
         include/ui/profile/edit_xrayvless.h
         src/ui/profile/edit_xrayvless.cpp
         include/ui/profile/edit_xrayvless.ui
+        include/ui/profile/edit_direct.h
+        include/ui/profile/edit_direct.ui
+        src/ui/profile/edit_direct.cpp
+
         include/database/Database.h
         src/database/Database.cpp
         include/database/ProfilesRepo.h

@@ -2,9 +2,12 @@
 
 #include <QAbstractItemView>
 #include <QMenu>
+#include <ranges>
+
 #include "include/configs/sub/GroupUpdater.hpp"
 #include "include/sys/Process.hpp"
 #include "include/sys/AutoRun.hpp"
+#include "include/sys/UrlScheme.hpp"
 
 #include "include/ui/setting/ThemeManager.hpp"
 #include "include/ui/setting/Icon.hpp"
@@ -32,15 +35,23 @@
 #ifdef Q_OS_WIN
 #include "3rdparty/WinCommander.hpp"
 #include "include/sys/windows/WinVersion.h"
+#include <Wbemidl.h>
 #else
 #ifdef Q_OS_LINUX
 #include "include/sys/linux/LinuxCap.h"
 #include <QDBusInterface>
 #include <QDBusReply>
-#include <QUuid>
+#include <sys/socket.h>
+#endif
+#ifdef Q_OS_MACOS
+#include <sys/socket.h>
+#include <sys/un.h>
 #endif
 #include <unistd.h>
 #endif
+
+#include <QUuid>
+#include <QUrlQuery>
 
 #include <QClipboard>
 #include <QModelIndex>
@@ -73,19 +84,74 @@ void UI_InitMainWindow() {
     mainwindow = new MainWindow;
 }
 
+// Caller must hold coreProcessMutex (reads core_process lock-free by design).
+bool MainWindow::verify_core_pid(QLocalSocket *socket) {
+    if (!core_process) return false;
+    qint64 expectedPid = core_process->processId();
+    if (expectedPid <= 0) return false;
+
+#if defined(Q_OS_LINUX)
+    struct ucred cred = {};
+    socklen_t credLen = sizeof(cred);
+    if (getsockopt(static_cast<int>(socket->socketDescriptor()), SOL_SOCKET, SO_PEERCRED, &cred, &credLen) == 0) {
+        return static_cast<qint64>(cred.pid) == expectedPid;
+    }
+    return false;
+#elif defined(Q_OS_MACOS)
+    pid_t pid = 0;
+    socklen_t pidLen = sizeof(pid);
+    if (getsockopt(static_cast<int>(socket->socketDescriptor()), SOL_LOCAL, LOCAL_PEERPID, &pid, &pidLen) == 0) {
+        return static_cast<qint64>(pid) == expectedPid;
+    }
+    return false;
+#elif defined(Q_OS_WIN)
+    ULONG pid = 0;
+    HANDLE hPipe = reinterpret_cast<HANDLE>(static_cast<qintptr>(socket->socketDescriptor()));
+    if (GetNamedPipeClientProcessId(hPipe, &pid)) {
+        return static_cast<qint64>(pid) == expectedPid;
+    }
+    return false;
+#else
+    Q_UNUSED(socket)
+    return true;
+#endif
+}
+
+// Maps a theme name to the log viewer's syntax-highlight mode (true = dark, false = light).
+// Stylesheet themes have a known brightness; plain QStyle themes follow the OS preference.
+static bool themeUsesDarkLog(const QString &theme) {
+    const auto lower = theme.toLower();
+    if (lower.contains("vista") || lower.contains("flatgray") || lower.contains("lightblue")) {
+        return false; // light themes
+    }
+    if (lower.contains("qdarkstyle") || lower.contains("blacksoft")) {
+        return true; // dark themes
+    }
+    return isDarkMode(); // bi-mode themes, follow system preference
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     mainwindow = this;
     setAcceptDrops(true);
-    MW_dialog_message = [=,this](const QString &a, const QString &b) {
+    MW_dialog_message = [=,this](MwMessage cmd, QStringList args) {
         runOnUiThread([=,this]
         {
-            dialog_message_impl(a, b);
+            dialog_message_impl(cmd, args);
+        });
+    };
+    MW_handle_deeplink = [=,this](const QString &url) {
+        runOnUiThread([=,this]
+        {
+            handle_deeplink_impl(url);
         });
     };
 
     // handle AutoRun migration and privilege matching
     AutoRun_FixPrivilegeIfNeeded();
     AutoRun_MigrateIfNeeded();
+
+    // register the throne:// URL scheme (self-heals if the install was moved)
+    UrlScheme_RegisterIfNeeded();
 
     // Setup misc UI
     // migrate old themes
@@ -109,12 +175,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // setup log
     ui->splitter->restoreState(DecodeB64IfValid(Configs::dataManager->settingsRepo->splitter_state));
-    new SyntaxHighlighter(Configs::dataManager->settingsRepo->theme.toLower().contains("vista") ? false : (Configs::dataManager->settingsRepo->theme.toLower().contains("qdarkstyle") ? true : isDarkMode()), qvLogDocument);
+    new SyntaxHighlighter(themeUsesDarkLog(Configs::dataManager->settingsRepo->theme), qvLogDocument);
     qvLogDocument->setUndoRedoEnabled(false);
     qvLogDocument->setMaximumBlockCount(Configs::dataManager->settingsRepo->max_log_line);
     ui->masterLogBrowser->setUndoRedoEnabled(false);
     ui->masterLogBrowser->setDocument(qvLogDocument);
-    ui->masterLogBrowser->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    applyLogBrowserFont();
     updateLogFilterFields();
     runOnThread([=, this] {
         log_process_loop();
@@ -127,28 +193,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     });
 #endif
     connect(themeManager, &ThemeManager::themeChanged, this, [=,this](const QString& theme){
-        if (theme.toLower().contains("vista")) {
-            // light themes
-            new SyntaxHighlighter(false, qvLogDocument);
-        } else if (theme.toLower().contains("qdarkstyle")) {
-            // dark themes
-            new SyntaxHighlighter(true, qvLogDocument);
-        } else {
-            // bi-mode themes, follow system preference
-            new SyntaxHighlighter(isDarkMode(), qvLogDocument);
-        }
-    });
-    connect(ui->masterLogBrowser->verticalScrollBar(), &QSlider::valueChanged, this, [=,this](int value) {
-        if (ui->masterLogBrowser->verticalScrollBar()->maximum() == value)
-            qvLogAutoScoll = true;
-        else
-            qvLogAutoScoll = false;
-    });
-    connect(ui->masterLogBrowser, &QTextBrowser::textChanged, this, [=,this]() {
-        if (!qvLogAutoScoll)
-            return;
-        auto bar = ui->masterLogBrowser->verticalScrollBar();
-        bar->setValue(bar->maximum());
+        new SyntaxHighlighter(themeUsesDarkLog(theme), qvLogDocument);
+        scheduleProxyListRefresh();
     });
     MW_show_log = [=,this](const QString &log) {
         append_log(log);
@@ -164,39 +210,58 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     runOnNewThread([=, this] {GetDeviceDetails(); });
 
     // Prepare core
-    Configs::dataManager->settingsRepo->core_port = MkPort();
-    if (Configs::dataManager->settingsRepo->core_port <= 0) Configs::dataManager->settingsRepo->core_port = 19810;
-
     auto core_path = QApplication::applicationDirPath() + "/";
     core_path += "ThroneCore";
 
-    QStringList args;
-    args.push_back("-port");
-    args.push_back(Int2String(Configs::dataManager->settingsRepo->core_port));
-    if (Configs::dataManager->settingsRepo->log_level == "debug") args.push_back("-debug");
+    bool coreDebugMode = (Configs::dataManager->settingsRepo->log_level == "debug");
+
+    // Create IPC server with a random UUID name
+    Configs::dataManager->settingsRepo->core_socket_name =
+        "throneIPC-" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    core_server = new QLocalServer(this);
+    core_server->setSocketOptions(QLocalServer::UserAccessOption);
+    if (!core_server->listen(Configs::dataManager->settingsRepo->core_socket_name)) {
+        qWarning() << "Failed to start IPC server:" << core_server->errorString();
+        qApp->quit();
+    }
+
+    connect(core_server, &QLocalServer::newConnection, this, [=, this]() {
+        auto socket = core_server->nextPendingConnection();
+        int profileId = -1;
+        {
+            // Hold coreProcessMutex so we never observe a half-published
+            // core_process while DS_cores is still constructing/starting it.
+            QMutexLocker lock(&coreProcessMutex);
+            if (!verify_core_pid(socket)) {
+                MW_show_log("[Warn] IPC connection from unexpected process rejected");
+                socket->close();
+                socket->deleteLater();
+                return;
+            }
+            if (core_process) {
+                profileId = core_process->start_profile_when_core_is_up;
+                core_process->start_profile_when_core_is_up = -1;
+            }
+        }
+        setup_rpc(socket);
+        Configs::dataManager->settingsRepo->core_running = true;
+        MW_dialog_message(MwMessage::CoreStarted, {Int2String(profileId)});
+    });
 
     // Start core
+    auto socketFullName = core_server->fullServerName();
     runOnThread(
-        [=,this] {
-            core_process = new Configs_sys::CoreProcess(core_path, args);
-            // Remember last started
-            if (Configs::dataManager->settingsRepo->remember_enable && Configs::dataManager->settingsRepo->remember_id >= 0) {
-                core_process->start_profile_when_core_is_up = Configs::dataManager->settingsRepo->remember_id;
+        [=, this] {
+            QMutexLocker lock(&coreProcessMutex);
+            core_process = new Configs_sys::CoreProcess(core_path, socketFullName, coreDebugMode);
+            if (Configs::dataManager->settingsRepo->remember_enable &&
+                Configs::dataManager->settingsRepo->remember_id >= 0) {
+                core_process->start_profile_when_core_is_up =
+                    Configs::dataManager->settingsRepo->remember_id;
             }
-            // Setup
-            setup_rpc();
             core_process->Start();
         },
         DS_cores);
-
-#ifdef Q_OS_LINUX
-    for (int i=0;i<20;i++)
-    {
-        QThread::msleep(100);
-        if (Configs::dataManager->settingsRepo->core_running) break;
-    }
-    if (!Configs::dataManager->settingsRepo->core_running) qDebug() << "[Warn] Core is taking too much time to start";
-#endif
 
     if (!Configs::dataManager->settingsRepo->font.isEmpty()) {
         auto font = qApp->font();
@@ -555,7 +620,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     trayMenu->addAction(ui->actionAllow_LAN);
     trayMenu->addSeparator();
     // Select Server submenu (dynamically populated with pagination)
-    constexpr int PAGE_SIZE = 15;
+    constexpr int PAGE_CAPACITY = 15;
     trayServerMenu = new QMenu(tr("Select Server"));
     trayMenu->addMenu(trayServerMenu);
     connect(trayServerMenu, &QMenu::aboutToShow, this, [=, this]() {
@@ -583,10 +648,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         }
         int totalProfiles = allProfileIDs.size();
         // Clamp page
-        int maxPage = qMax(0, (totalProfiles - 1) / PAGE_SIZE);
+        int maxPage = qMax(0, (totalProfiles - 1) / PAGE_CAPACITY);
         trayServerPage = qBound(0, trayServerPage, maxPage);
-        int offset = trayServerPage * PAGE_SIZE;
-        int end = qMin(offset + PAGE_SIZE, totalProfiles);
+        int offset = trayServerPage * PAGE_CAPACITY;
+        int end = qMin(offset + PAGE_CAPACITY, totalProfiles);
         // Show ↑ if not on first page
         if (trayServerPage > 0) {
             auto *upAction = trayServerMenu->addAction(QStringLiteral("\u2191"));
@@ -658,7 +723,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
             core_process->Kill();
         }, DS_cores);
     });
-    connect(ui->actionRestart_Program, &QAction::triggered, this, [=,this] { MW_dialog_message("", "RestartProgram"); });
+    connect(ui->actionRestart_Program, &QAction::triggered, this, [=,this] { MW_dialog_message(MwMessage::RestartProgram, {}); });
     connect(ui->actionShow_window, &QAction::triggered, this, [=,this] { ActivateWindow(this); });
     connect(ui->actionRemember_last_proxy, &QAction::triggered, this, [=,this](bool checked) {
         Configs::dataManager->settingsRepo->remember_enable = checked;
@@ -672,7 +737,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(ui->actionAllow_LAN, &QAction::triggered, this, [=,this](bool checked) {
         Configs::dataManager->settingsRepo->inbound_address = checked ? "::" : "127.0.0.1";
         ui->actionAllow_LAN->setChecked(checked);
-        MW_dialog_message("", "UpdateConfigs::dataManager->settingsRepo");
+        MW_dialog_message(MwMessage::UpdateSettings, {});
     });
     //
     connect(ui->checkBox_VPN, &QCheckBox::clicked, this, [=,this](bool checked) { set_spmode_vpn(checked); });
@@ -910,7 +975,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         }
 
         ui->menu_export_config->setVisible(true);
-        if (profile->outbound->IsXray()) ui->actionExport_Xray_config->setVisible(true);
+        if (profile->outbound->IsXray() || profile->type == "chain") ui->actionExport_Xray_config->setVisible(true);
     });
     connect(ui->actionExport_Xray_config, &QAction::triggered, this, [=,this]() {
         auto ents = get_now_selected_list();
@@ -969,12 +1034,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         }
         auto file = QFile(path);
         if (!file.exists()) return;
-        if (file.size() > 50 * 1024 * 1024)
-        {
+        if (file.size() > 50 * 1024 * 1024) {
             MW_show_log("File too large, will not process it");
             return;
         }
-        file.open(QIODevice::ReadOnly);
+        if (!file.open(QIODevice::ReadOnly)) return;
         auto contents = file.readAll();
         file.close();
         Subscription::groupUpdater->AsyncUpdate(contents);
@@ -989,6 +1053,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     t = new QTimer;
     connect(t, &QTimer::timeout, this, [&] { Configs_sys::logCounter.fetchAndStoreRelaxed(0); });
     t->start(1000);
+
+    // debounced refresh so font/theme/resize changes settle without manual interaction;
+    // mirrors what show_group does after a tab switch. Fired from changeEvent (FontChange/
+    // PaletteChange/StyleChange), resizeEvent, and ThemeManager::themeChanged.
+    m_proxyListRefreshDebounce = new QTimer(this);
+    m_proxyListRefreshDebounce->setSingleShot(true);
+    connect(m_proxyListRefreshDebounce, &QTimer::timeout, this, [this] { refresh_proxy_list({}, false); });
 
     // auto update timer
     TM_auto_update_subsctiption = new QTimer;
@@ -1013,6 +1084,67 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     }
 }
 
+void MainWindow::applyLogBrowserFont() {
+    QFont logFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    int pt = qApp->font().pointSize();
+    if (pt <= 0) pt = Configs::dataManager->settingsRepo->font_size;
+    if (pt > 0) logFont.setPointSize(pt);
+    ui->masterLogBrowser->setFont(logFont);
+}
+
+void MainWindow::changeEvent(QEvent *event) {
+    if (event->type() == QEvent::FontChange) {
+        // masterLogBrowser keeps its monospace family but follows the user's point size
+        applyLogBrowserFont();
+
+        // Widgets with per-widget stylesheets (set in the .ui files — tabWidgets, toolButtons,
+        // etc.) get wrapped in QStyleSheetStyle, which caches font-dependent metrics like tab
+        // size hints and button paddings. Those caches don't invalidate on FontChange, so the
+        // visible size stays at the old font. Toggling the stylesheet through "" forces
+        // QStyleSheetStyle::repolish, which clears the cache and re-evaluates rules.
+        auto refreshStylesheetCache = [](QWidget *w) {
+            QString ss = w->styleSheet();
+            if (ss.isEmpty()) return;
+            w->setStyleSheet("");
+            w->setStyleSheet(ss);
+        };
+        const auto allChildren = findChildren<QWidget*>();
+        for (QWidget *w : allChildren) {
+            refreshStylesheetCache(w);
+        }
+
+        // profilesTableView has no per-widget stylesheet, so the stylesheet trick above
+        // doesn't apply. Toggle its font through a different point size to force a real
+        // FontChange (Qt skips setFont when the resolved font is unchanged), then return
+        // to inheriting from qApp so future changes still propagate. Both updates coalesce.
+        auto forceFontReapply = [](QWidget *w) {
+            if (!w) return;
+            QFont currentFont = QApplication::font();
+            QFont diffFont = currentFont;
+            diffFont.setPointSize(currentFont.pointSize() + 1);
+            w->setFont(diffFont);
+            w->setFont(QFont());
+            w->updateGeometry();
+        };
+        forceFontReapply(ui->profilesTableView);
+    }
+    if (event->type() == QEvent::FontChange ||
+        event->type() == QEvent::PaletteChange ||
+        event->type() == QEvent::StyleChange) {
+        scheduleProxyListRefresh();
+    }
+    QMainWindow::changeEvent(event);
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event) {
+    QMainWindow::resizeEvent(event);
+    scheduleProxyListRefresh();
+}
+
+void MainWindow::scheduleProxyListRefresh() {
+    if (m_proxyListRefreshDebounce) m_proxyListRefreshDebounce->start(200);
+}
+
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
     if (event->mimeData()->hasUrls() || event->mimeData()->hasText()) {
@@ -1033,9 +1165,8 @@ void MainWindow::dropEvent(QDropEvent* event)
                 if (auto qpx = QPixmap(url.toLocalFile()); !qpx.isNull())
                 {
                     parseQrImage(&qpx);
-                } else if (auto file = QFile(url.toLocalFile()); file.exists())
+                } else if (auto file = QFile(url.toLocalFile()); file.exists() && file.open(QFile::ReadOnly))
                 {
-                    file.open(QFile::ReadOnly);
                     if (file.size() > 50 * 1024 * 1024)
                     {
                         file.close();
@@ -1054,7 +1185,7 @@ void MainWindow::dropEvent(QDropEvent* event)
     }
 
     if (mimeData->hasText()) {
-        Subscription::groupUpdater->AsyncUpdate(mimeData->text());
+        import_or_handle_deeplink(mimeData->text());
         event->acceptProposedAction();
         return;
     }
@@ -1101,6 +1232,7 @@ void MainWindow::show_group(int gid) {
     }
 
     if (Configs::dataManager->settingsRepo->current_group != gid) {
+        saveProfileFocusState();
         if (auto lastGroup = Configs::dataManager->groupsRepo->CurrentGroup()) {
             lastGroup->scroll_last_profile = ui->profilesTableView->firstVisibleRow();
             Configs::dataManager->groupsRepo->Save(lastGroup);
@@ -1153,133 +1285,163 @@ void MainWindow::show_group(int gid) {
 
 // callback
 
-void MainWindow::dialog_message_impl(const QString &sender, const QString &info) {
-    // info
-    if (info.contains("UpdateTrayIcon")) {
-        icon_status = -1;
-        refresh_status();
+void MainWindow::handle_deeplink_impl(const QString &url) {
+    const QUrl u(url);
+    // QUrl lowercases the host, so "throne://AddSub/" arrives with host "addsub".
+    const QString cmd = u.host();
+    const QUrlQuery q(u);
+
+    if (cmd.compare("addsub", Qt::CaseInsensitive) == 0) {
+        const QString subUrl = q.queryItemValue("url", QUrl::FullyDecoded);
+        const QString name = q.queryItemValue("name", QUrl::FullyDecoded);
+        const QString autoUpdateRaw = q.queryItemValue("autoupdate", QUrl::FullyDecoded).trimmed().toLower();
+        // Default ON when the param is absent (matches normal subscription behavior).
+        const bool autoUpdate = autoUpdateRaw.isEmpty() || autoUpdateRaw == "1"
+            || autoUpdateRaw == "true" || autoUpdateRaw == "on" || autoUpdateRaw == "yes";
+        handle_addsub(subUrl, name, autoUpdate);
+        return;
     }
-    if (info.contains("UpdateConfigs::dataManager->settingsRepo")) {
+
+    MW_show_log(tr("Ignored deeplink with unknown command: %1").arg(cmd));
+}
+
+void MainWindow::handle_addsub(const QString &url, const QString &name, bool autoUpdate) {
+    if (url.isEmpty()) {
+        MessageBoxWarning(tr("Add subscription"), tr("The link did not contain a subscription URL."));
+        return;
+    }
+
+    ActivateWindow(this);
+
+    const QString groupName = FIRST_OR_SECOND(name, QUrl(url).host());
+    const auto prompt = tr("Add this subscription?\n\nName: %1\nURL: %2\nAuto update: %3")
+                            .arg(groupName, url, autoUpdate ? tr("On") : tr("Off"));
+    if (QMessageBox::question(GetMessageBoxParent(), tr("Add subscription"), prompt) != QMessageBox::StandardButton::Yes) {
+        return;
+    }
+
+    auto group = Configs::GroupsRepo::NewGroup();
+    group->name = groupName;
+    group->url = url;
+    group->skip_auto_update = !autoUpdate;
+    Configs::dataManager->groupsRepo->AddGroup(group);
+    refresh_groups();
+    Subscription::groupUpdater->AsyncUpdate(url, group->id);
+}
+
+void MainWindow::import_or_handle_deeplink(const QString &text) {
+    if (const QString trimmed = text.trimmed(); trimmed.startsWith("throne://")) {
+        handle_deeplink_impl(trimmed);
+        return;
+    }
+    Subscription::groupUpdater->AsyncUpdate(text);
+}
+
+void MainWindow::dialog_message_impl(MwMessage cmd, const QStringList &args) {
+    const auto changed = [&](const QString &flag) { return args.contains(flag); };
+    auto &settings = Configs::dataManager->settingsRepo;
+
+    switch (cmd) {
+    case MwMessage::UpdateSettings: {
         updateLogFilterFields();
-        if (info.contains("UpdateMaxLogLines")) {
-            qvLogDocument->setMaximumBlockCount(Configs::dataManager->settingsRepo->max_log_line);
+        if (changed(MwArg::TrayIcon)) {
+            icon_status = -1;
         }
-        if (info.contains("UpdateDisableTray")) {
-            tray->setVisible(!Configs::dataManager->settingsRepo->disable_tray);
+        if (changed(MwArg::MaxLogLines)) {
+            qvLogDocument->setMaximumBlockCount(settings->max_log_line);
         }
-        if (info.contains("UpdateSystemDns"))
-        {
-            if (Configs::dataManager->settingsRepo->show_system_dns) ui->system_dns->show();
+        if (changed(MwArg::DisableTray)) {
+            tray->setVisible(!settings->disable_tray);
+        }
+        if (changed(MwArg::SystemDns)) {
+            if (settings->show_system_dns) ui->system_dns->show();
             else ui->system_dns->hide();
         }
-        if (info.contains("NeedChoosePort"))
-        {
-            Configs::dataManager->settingsRepo->inbound_socks_port = MkPort();
-            if (Configs::dataManager->settingsRepo->spmode_system_proxy)
-            {
+        if (changed(MwArg::ChoosePort)) {
+            settings->inbound_socks_port = MkPort();
+            if (settings->spmode_system_proxy) {
                 set_spmode_system_proxy(false);
                 set_spmode_system_proxy(true);
             }
         }
-        if (info.contains("UpdateDisableAdmin")) {
+        if (changed(MwArg::DisableAdmin)) {
             AutoRun_FixPrivilegeIfNeeded();
         }
-        auto suggestRestartProxy = Configs::dataManager->settingsRepo->Save();
-        if (info.contains("RouteChanged")) {
-            Configs::dataManager->settingsRepo->Save();
+        auto suggestRestartProxy = settings->Save();
+        if (changed(MwArg::Route)) {
+            settings->Save();
             suggestRestartProxy = true;
         }
-        if (info.contains("NeedRestart")) {
+        if (changed(MwArg::NeedRestart)) {
             suggestRestartProxy = false;
         }
-        if (info.contains("VPNChanged") && Configs::dataManager->settingsRepo->spmode_vpn) {
+        if (changed(MwArg::Vpn) && settings->spmode_vpn) {
             MessageBoxWarning(tr("Tun Settings changed"), tr("Restart Tun to take effect."));
         }
-        if ((info.contains("NeedChoosePort") || suggestRestartProxy) && Configs::dataManager->settingsRepo->started_id >= 0 &&
+        if ((changed(MwArg::ChoosePort) || suggestRestartProxy) && settings->started_id >= 0 &&
             QMessageBox::question(GetMessageBoxParent(), tr("Confirmation"), tr("Settings changed, restart proxy?")) == QMessageBox::StandardButton::Yes) {
-            profile_start(Configs::dataManager->settingsRepo->started_id);
+            profile_start(settings->started_id);
         }
         refresh_status();
-    }
-    if (info.contains("DNSServerChanged"))
-    {
-        if (Configs::dataManager->settingsRepo->system_dns_set)
-        {
-            auto oldAddr = info.split(',')[1];
-            set_system_dns(false);
-            set_system_dns(true);
-        }
-    }
-    if (info.contains("NeedRestart")) {
-        auto n = QMessageBox::warning(GetMessageBoxParent(), tr("Settings changed"), tr("Restart the program to take effect."), QMessageBox::Yes | QMessageBox::No);
-        if (n == QMessageBox::Yes) {
+        if (changed(MwArg::NeedRestart) &&
+            QMessageBox::warning(GetMessageBoxParent(), tr("Settings changed"), tr("Restart the program to take effect."), QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
             this->exit_reason = 2;
             on_menu_exit_triggered();
         }
+        break;
     }
-    //
-    if (info == "RestartProgram") {
+    case MwMessage::RestartProgram:
         this->exit_reason = 2;
         on_menu_exit_triggered();
-    }
-    if (info == "Raise") {
+        break;
+    case MwMessage::Raise:
         ActivateWindow(this);
-    }
-    if (info == "NeedAdmin") {
-        get_elevated_permissions();
-    }
-    if (info == "UpdateShortcuts")
-    {
+        break;
+    case MwMessage::UpdateShortcuts:
         loadShortcuts();
-    }
-    // sender
-    if (sender == Dialog_DialogEditProfile) {
-        auto msg = info.split(',');
-        if (msg.contains("accept")) {
-            refresh_proxy_list({}, true);
-            if (msg.contains("restart")) {
-                if (QMessageBox::question(GetMessageBoxParent(), tr("Confirmation"), tr("Settings changed, restart proxy?")) == QMessageBox::StandardButton::Yes) {
-                    profile_start(Configs::dataManager->settingsRepo->started_id);
-                }
-            }
+        break;
+    case MwMessage::ProfileChanged:
+        refresh_proxy_list({}, true);
+        if (changed(MwArg::RestartProxy) &&
+            QMessageBox::question(GetMessageBoxParent(), tr("Confirmation"), tr("Settings changed, restart proxy?")) == QMessageBox::StandardButton::Yes) {
+            profile_start(settings->started_id);
         }
-    } else if (sender == Dialog_DialogManageGroups) {
-        if (info.startsWith("refresh")) {
-            this->refresh_groups();
+        break;
+    case MwMessage::GroupsChanged:
+        refresh_groups();
+        break;
+    case MwMessage::SubscriptionFinished:
+        refresh_proxy_list({}, true);
+        if (!changed(MwArg::Quiet)) {
+            MW_show_log(tr("Imported %1 profile(s)").arg(settings->imported_count));
         }
-    } else if (sender == "SubUpdater") {
-        if (info.startsWith("finish")) {
-            refresh_proxy_list({}, true);
-            if (!info.contains("dingyue")) {
-                MW_show_log(tr("Imported %1 profile(s)").arg(Configs::dataManager->settingsRepo->imported_count));
-            }
-        } else if (info == "NewGroup") {
-            refresh_groups();
+        break;
+    case MwMessage::SubscriptionNewGroup:
+        refresh_groups();
+        break;
+    case MwMessage::CoreCrashed:
+        profile_stop();
+        break;
+    case MwMessage::CoreStarted:
+        Configs::IsAdmin(true);
+        if (settings->remember_system_proxy) {
+            set_spmode_system_proxy(true, false);
         }
-    } else if (sender == "ExternalProcess") {
-        if (info == "Crashed") {
-            profile_stop();
-        } else if (info.startsWith("CoreStarted")) {
-            Configs::IsAdmin(true);
-            if (Configs::dataManager->settingsRepo->remember_spmode.contains("system_proxy")) {
-                set_spmode_system_proxy(true, false);
-            }
-            if (Configs::dataManager->settingsRepo->remember_spmode.contains("vpn") || Configs::dataManager->settingsRepo->flag_restart_tun_on) {
-                set_spmode_vpn(true, false);
-            }
-            if (Configs::dataManager->settingsRepo->flag_dns_set) {
-                set_system_dns(true);
-            }
-            if (auto id = info.split(',')[1].toInt(); id >= 0)
-            {
-                profile_start(id);
-            }
-            if (Configs::dataManager->settingsRepo->system_dns_set) {
-                set_system_dns(true);
-                ui->system_dns->setChecked(true);
-            }
-            refresh_status();
+        if (settings->remember_tun || settings->flag_restart_tun_on) {
+            set_spmode_vpn(true, false);
         }
+        if (settings->flag_dns_set) {
+            set_system_dns(true);
+        }
+        if (auto id = args.value(0).toInt(); id >= 0) {
+            profile_start(id);
+        }
+        if (settings->system_dns_set) {
+            set_system_dns(true);
+            ui->system_dns->setChecked(true);
+        }
+        refresh_status();
+        break;
     }
 }
 
@@ -1334,24 +1496,30 @@ void MainWindow::on_menu_hotkey_settings_triggered() {
 
 void MainWindow::on_commitDataRequest() {
     qDebug() << "Start of data save";
-    //
-    Configs::dataManager->settingsRepo->mainWindowGeometry = this->saveGeometry().toBase64(QByteArray::Base64Encoding);
+
+    auto* settings = Configs::dataManager->settingsRepo.get();
+
+    settings->mainWindowGeometry = this->saveGeometry().toBase64(QByteArray::Base64Encoding);
     if (!isMaximized()) {
-        auto olds = Configs::dataManager->settingsRepo->mw_size;
         auto news = QString("%1x%2").arg(size().width()).arg(size().height());
-        if (olds != news) {
-            Configs::dataManager->settingsRepo->mw_size = news;
-        }
+        if (settings->mw_size != news) settings->mw_size = news;
     }
-    //
-    Configs::dataManager->settingsRepo->splitter_state = ui->splitter->saveState().toBase64();
-    //
-    auto last_id = Configs::dataManager->settingsRepo->started_id;
-    if (Configs::dataManager->settingsRepo->remember_enable && last_id >= 0) {
-        Configs::dataManager->settingsRepo->remember_id = last_id;
+    settings->splitter_state = ui->splitter->saveState().toBase64();
+
+    // Snapshot the live app state on exit so "remember last proxy" restores it
+    // on the next launch. Capturing it here, rather than when each toggle
+    // happens, makes the result independent of the order in which the user
+    // toggled the proxy/tun modes vs. the remember option itself.
+    if (settings->remember_enable) {
+        if (settings->started_id >= 0) settings->remember_id = settings->started_id;
+        settings->remember_system_proxy = settings->spmode_system_proxy;
+        settings->remember_tun = settings->spmode_vpn;
+    } else {
+        settings->remember_system_proxy = false;
+        settings->remember_tun = false;
     }
-    //
-    Configs::dataManager->settingsRepo->Save();
+
+    settings->Save();
     qDebug() << "End of data save";
 }
 
@@ -1367,7 +1535,7 @@ void MainWindow::prepare_exit()
     }
     Configs::dataManager->settingsRepo->prepare_exit = true;
     //
-    set_spmode_system_proxy(false, false);
+    set_system_proxy(false);
     if (Configs::dataManager->settingsRepo->system_dns_set) set_system_dns(false, false);
     RegisterHiddenMenuShortcuts(true);
     RegisterHotkey(true);
@@ -1414,7 +1582,7 @@ void MainWindow::on_menu_exit_triggered() {
             if (exit_reason == 3) arguments << "-flag_restart_tun_on";
             if (exit_reason == 4) arguments << "-flag_restart_dns_set";
 #ifdef Q_OS_WIN
-            WinCommander::runProcessElevated(program, arguments, "", WinCommander::SW_NORMAL, false);
+            WinCommander::runProcessElevated(program, arguments, "", 1, false);
 #else
             QProcess::startDetached(program, arguments);
 #endif
@@ -1483,7 +1651,7 @@ bool MainWindow::get_elevated_permissions(int reason) {
     auto n = QMessageBox::warning(GetMessageBoxParent(), software_name, tr("Please give the core root privileges"), QMessageBox::Yes | QMessageBox::No);
     if (n == QMessageBox::Yes)
     {
-        auto Command = QString("sudo chown root:wheel " + Configs::FindCoreRealPath() + " && " + "sudo chmod u+s "+Configs::FindCoreRealPath());
+        auto Command = QString("sudo chown root:wheel '%1' && sudo chmod u+s '%1'").arg(Configs::FindCoreRealPath());
         auto ret = Mac_Run_Command(Command);
         if (ret == 0) {
             MessageBoxInfo(tr("Requesting permission"), tr("Please Enter your password in the opened terminal, then try again"));
@@ -1495,6 +1663,38 @@ bool MainWindow::get_elevated_permissions(int reason) {
     }
 #endif
     return false;
+}
+
+void MainWindow::set_system_proxy(bool enable) {
+    if (enable) {
+        auto socks_port = Configs::dataManager->settingsRepo->inbound_socks_port;
+        SetSystemProxy(socks_port, socks_port, Configs::dataManager->settingsRepo->proxy_scheme);
+    } else {
+        ClearSystemProxy();
+    }
+}
+
+void MainWindow::set_spmode_system_proxy(bool enable, bool save) {
+    if (enable && Configs::dataManager->settingsRepo->disable_mixed_inbound) {
+        runOnUiThread([=] {
+           MessageBoxWarning("Invalid Operation", "Cannot set system proxy when mixed inbound is disabled.");
+        });
+        ui->checkBox_SystemProxy->setChecked(false);
+        return;
+    }
+    Configs::dataManager->settingsRepo->spmode_system_proxy = enable;
+    if (running) {
+        set_system_proxy(enable);
+        if (!enable && Configs::dataManager->settingsRepo->reset_proxy_on_disable_sp) {
+            profile_start(running->id);
+        }
+    }
+
+    if (save) {
+        Configs::dataManager->settingsRepo->Save();
+    }
+
+    refresh_status();
 }
 
 void MainWindow::set_spmode_vpn(bool enable, bool save) {
@@ -1511,10 +1711,6 @@ void MainWindow::set_spmode_vpn(bool enable, bool save) {
     }
 
     if (save) {
-        Configs::dataManager->settingsRepo->remember_spmode.removeAll("vpn");
-        if (enable) {
-            Configs::dataManager->settingsRepo->remember_spmode.append("vpn");
-        }
         Configs::dataManager->settingsRepo->Save();
     }
 
@@ -1776,7 +1972,8 @@ void MainWindow::refresh_status(const QString &traffic_update) {
     }
     //
     auto display_socks = DisplayAddress(Configs::dataManager->settingsRepo->inbound_address, Configs::dataManager->settingsRepo->inbound_socks_port);
-    auto inbound_txt = QString("Mixed: %1").arg(display_socks);
+    auto inbound_disabled = Configs::dataManager->settingsRepo->disable_mixed_inbound;
+    auto inbound_txt = QString("Mixed: %1").arg(inbound_disabled ? "Disabled" : display_socks);
     ui->label_inbound->setText(inbound_txt);
     //
     ui->checkBox_VPN->setChecked(Configs::dataManager->settingsRepo->spmode_vpn);
@@ -1940,7 +2137,9 @@ void MainWindow::refresh_proxy_list_column_size() {
 }
 
 void MainWindow::refresh_proxy_list(const QList<int>& ids, bool mayNeedReset) {
+    if (!Configs::dataManager->settingsRepo->refreshing_group) saveProfileFocusState();
     refresh_proxy_list_impl(ids, mayNeedReset);
+    if (mayNeedReset) restoreProfileFocusState();
 }
 
 void MainWindow::refresh_proxy_list_impl(const QList<int>& ids, bool mayNeedReset) {
@@ -1991,7 +2190,7 @@ void MainWindow::on_menu_add_from_input_triggered() {
 
 void MainWindow::on_menu_add_from_clipboard_triggered() {
     auto clipboard = QApplication::clipboard()->text();
-    Subscription::groupUpdater->AsyncUpdate(clipboard);
+    import_or_handle_deeplink(clipboard);
 }
 
 void MainWindow::on_menu_clone_triggered() {
@@ -2070,7 +2269,9 @@ void MainWindow::on_menu_copy_links_triggered() {
     QStringList links;
     auto ents = Configs::dataManager->profilesRepo->GetProfileBatch(entIDs);
     for (const auto &ent: ents) {
-        links += ent->outbound->ExportToLink();
+        auto link = ent->outbound->ExportToLink();
+        if (link.isEmpty()) link = ent->outbound->ExportJsonLink();
+        links += link;
     }
     if (links.length() == 0) return;
     QApplication::clipboard()->setText(links.join("\n"));
@@ -2361,6 +2562,9 @@ void MainWindow::on_menu_remove_invalid_triggered() {
      QMutex mu;
      QMutex access;
      int profileSize = currentGroup->Profiles().size();
+     // Empty group: no worker is ever queued, so the join-mutex would never be
+     // unlocked and the worker thread would block forever on mu.lock() below.
+     if (profileSize == 0) return;
      mu.lock();
      for (const auto& profileID : currentGroup->Profiles()) {
          auto profile = Configs::dataManager->profilesRepo->GetProfile(profileID);
@@ -2478,6 +2682,60 @@ QList<int> MainWindow::get_selected_or_group() {
     return profileIDs;
 }
 
+void MainWindow::saveProfileFocusState() {
+    auto group = Configs::dataManager->groupsRepo->CurrentGroup();
+    if (group == nullptr) return;
+
+    if (!profilesTableModel) return;
+    QModelIndexList indices = ui->profilesTableView->selectionModel()->selectedRows(0);
+    group->selectedProfilesIdIdxPairs.clear();
+
+    for (const QModelIndex &idx : indices) {
+        group->selectedProfilesIdIdxPairs << std::make_pair(profilesTableModel->profileIdAt(idx.row()), idx.row());
+    }
+}
+
+void MainWindow::restoreProfileFocusState() {
+    auto group = Configs::dataManager->groupsRepo->CurrentGroup();
+    if (group == nullptr || group->selectedProfilesIdIdxPairs.isEmpty()) return;
+
+    QList<int> newIndexes;
+    for (auto &id: group->selectedProfilesIdIdxPairs | std::views::keys) {
+        if (auto newIdx = profilesTableModel->indexOfProfile(id); newIdx != -1) {
+            newIndexes << newIdx;
+        }
+    }
+
+    ui->profilesTableView->setFocus();
+
+    if (!newIndexes.isEmpty()) {
+        // some profiles were selected, some of them remain, select the remaining ones
+        QItemSelection selection;
+
+        for (int row : newIndexes) {
+            QModelIndex left  = profilesTableModel->index(row, 0);
+            QModelIndex right = profilesTableModel->index(row, profilesTableModel->columnCount() - 1);
+            selection.select(left, right);
+        }
+        ui->profilesTableView->selectionModel()->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        ui->profilesTableView->selectionModel()->setCurrentIndex(profilesTableModel->index(newIndexes.first(), 0), QItemSelectionModel::NoUpdate);
+        return;
+    }
+
+    auto desiredIndex = group->selectedProfilesIdIdxPairs.first().second;
+    desiredIndex = std::min(desiredIndex, static_cast<int>(profilesTableModel->profileIds().size() - 1));
+    if (desiredIndex < 0) return;
+
+    if (group->selectedProfilesIdIdxPairs.size() == 1) {
+        QItemSelection selection;
+        QModelIndex left  = profilesTableModel->index(desiredIndex, 0);
+        QModelIndex right = profilesTableModel->index(desiredIndex, profilesTableModel->columnCount() - 1);
+        selection.select(left, right);
+        ui->profilesTableView->selectionModel()->select(selection, QItemSelectionModel::Select);
+    }
+    ui->profilesTableView->selectionModel()->setCurrentIndex(profilesTableModel->index(desiredIndex, 0), QItemSelectionModel::NoUpdate);
+}
+
 void MainWindow::clearUnavailableProfiles(bool confirm, QList<int> profileIDs) {
     QList<int> del_ids;
     int remove_display_count = 0;
@@ -2571,8 +2829,21 @@ void MainWindow::log_process_loop() {
         logMutex.unlock();
 
         if (!batchToPrint.isEmpty()) {
-            runOnUiThread([=, this] {
-               FastAppendTextDocument(batchToPrint.trimmed(), qvLogDocument);
+            QString trimmedBatch = batchToPrint.trimmed();
+            runOnUiThread([trimmedBatch = std::move(trimmedBatch), this] {
+                auto bar = ui->masterLogBrowser->verticalScrollBar();
+                auto layout = qvLogDocument->documentLayout();
+                // Anchor to the block at the top of the viewport; if trim shifts its
+                // document-Y afterwards, we replay the original sub-block offset.
+                QTextBlock anchorBlock = ui->masterLogBrowser->cursorForPosition(QPoint(0, 0)).block();
+                int viewportOffset = bar->value() - static_cast<int>(layout->blockBoundingRect(anchorBlock).y());
+                FastAppendTextDocument(trimmedBatch, qvLogDocument);
+                if (Configs::dataManager->settingsRepo->log_auto_scroll) {
+                    bar->setValue(bar->maximum());
+                } else if (anchorBlock.isValid()) {
+                    int newY = static_cast<int>(layout->blockBoundingRect(anchorBlock).y());
+                    bar->setValue(newY + viewportOffset);
+                }
             });
         }
     }
@@ -2638,7 +2909,7 @@ void MainWindow::on_tabWidget_customContextMenuRequested(const QPoint &p) {
 
             if (ret == QDialog::Accepted) {
                 Configs::dataManager->groupsRepo->AddGroup(ent);
-                MW_dialog_message(Dialog_DialogManageGroups, "refresh-1");
+                MW_dialog_message(MwMessage::GroupsChanged, {});
             }
         });
 
@@ -2661,7 +2932,7 @@ void MainWindow::on_tabWidget_customContextMenuRequested(const QPoint &p) {
 
         if (ret == QDialog::Accepted) {
             Configs::dataManager->groupsRepo->AddGroup(ent);
-            MW_dialog_message(Dialog_DialogManageGroups, "refresh-1");
+            MW_dialog_message(MwMessage::GroupsChanged, {});
         }
     });
     connect(deleteAction, &QAction::triggered, this, [=,this] {
@@ -2672,7 +2943,7 @@ void MainWindow::on_tabWidget_customContextMenuRequested(const QPoint &p) {
                 if (running->gid == id) profile_stop(false, true, false);
             }
             Configs::dataManager->groupsRepo->DeleteGroup(id);
-            MW_dialog_message(Dialog_DialogManageGroups, "refresh-1");
+            MW_dialog_message(MwMessage::GroupsChanged, {});
         }
     });
     connect(editAction, &QAction::triggered, this, [=,this]{
@@ -2682,7 +2953,7 @@ void MainWindow::on_tabWidget_customContextMenuRequested(const QPoint &p) {
         connect(dialog, &QDialog::finished, this, [=,this] {
             if (dialog->result() == QDialog::Accepted) {
                 Configs::dataManager->groupsRepo->Save(ent);
-                MW_dialog_message(Dialog_DialogManageGroups, "refresh" + Int2String(ent->id));
+                MW_dialog_message(MwMessage::GroupsChanged, {});
             }
             dialog->deleteLater();
         });

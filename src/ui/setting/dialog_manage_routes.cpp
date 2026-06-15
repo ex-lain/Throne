@@ -85,6 +85,10 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent, bool startOnRoutingTab) 
     ui->direct_dns_strategy->addItems(qsValue);
     ui->remote_dns_strategy->addItems(qsValue);
     ui->local_override->setText(Configs::dataManager->settingsRepo->core_box_underlying_dns);
+    ui->cache_cap->setText(Int2String(Configs::dataManager->settingsRepo->dns_cache_capacity));
+    ui->disable_cache->setChecked(Configs::dataManager->settingsRepo->dns_disable_cache);
+    ui->disable_expire->setChecked(Configs::dataManager->settingsRepo->dns_disable_expire);
+    ui->reverse_mapping->setChecked(Configs::dataManager->settingsRepo->dns_reverse_mapping);
     ui->enable_fakeip->setChecked(Configs::dataManager->settingsRepo->fake_dns);
     //
     connect(ui->use_dns_object, &QCheckBox::stateChanged, this, [=,this](int state) {
@@ -143,8 +147,8 @@ DialogManageRoutes::DialogManageRoutes(QWidget *parent, bool startOnRoutingTab) 
     });
 
     QStringList ruleItems = {"domain:", "suffix:", "regex:"};
-    for (const auto& item : ruleSetMap) {
-        ruleItems.append("ruleset:" + QString::fromStdString(item.first));
+    for (const auto& item : ruleSetList) {
+        ruleItems.append("ruleset:" + QString::fromUtf8(item.first.data(), item.first.size()));
     }
     rule_editor = new AutoCompleteTextEdit("", ruleItems, this);
     ui->hijack_box->layout()->replaceWidget(ui->dnshijack_rules, rule_editor);
@@ -240,6 +244,10 @@ void DialogManageRoutes::accept() {
     Configs::dataManager->settingsRepo->dns_object = ui->dns_object->toPlainText();
     Configs::dataManager->settingsRepo->remote_dns = ui->remote_dns->currentText();
     Configs::dataManager->settingsRepo->remote_dns_strategy = ui->remote_dns_strategy->currentText();
+    Configs::dataManager->settingsRepo->dns_cache_capacity = ui->cache_cap->text().toInt();
+    Configs::dataManager->settingsRepo->dns_disable_cache = ui->disable_cache->isChecked();
+    Configs::dataManager->settingsRepo->dns_disable_expire = ui->disable_expire->isChecked();
+    Configs::dataManager->settingsRepo->dns_reverse_mapping = ui->reverse_mapping->isChecked();
     Configs::dataManager->settingsRepo->direct_dns = ui->direct_dns->currentText();
     Configs::dataManager->settingsRepo->direct_dns_strategy = ui->direct_dns_strategy->currentText();
     Configs::dataManager->settingsRepo->core_box_underlying_dns = ui->local_override->text().trimmed();
@@ -275,9 +283,7 @@ void DialogManageRoutes::accept() {
     Configs::dataManager->settingsRepo->warp_public_key = ui->warp_public_key->text();
 
     //
-    QStringList msg{"UpdateConfigs::dataManager->settingsRepo"};
-    msg << "RouteChanged";
-    MW_dialog_message("", msg.join(","));
+    MW_dialog_message(MwMessage::UpdateSettings, {MwArg::Route});
 
     QDialog::accept();
 }

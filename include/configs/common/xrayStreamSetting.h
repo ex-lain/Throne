@@ -4,11 +4,15 @@
 namespace Configs {
     inline QStringList XrayNetworks = {"raw", "xhttp", "ws", "httpupgrade", "grpc"};
     inline QStringList XrayXHTTPModes = {"auto", "packet-up", "stream-up", "stream-one"};
+    inline QStringList XrayXHTTPMetaPlacements = {"", "path", "cookie", "header", "query"};
+    inline QStringList XrayXHTTPUplinkDataPlacements = {"", "auto", "body", "cookie", "header"};
+    inline QStringList XrayXHTTPUplinkMethods = {"", "POST", "PUT", "PATCH", "GET"};
 
     class xrayTLS : public baseConfig {
         public:
         QString serverName;
-        bool allowInsecure = false;
+        QString pinnedPeerCertSha256;
+        QString verifyPeerCertByName;
         QStringList alpn;
         QString fingerprint;
 
@@ -42,12 +46,31 @@ namespace Configs {
         QString path;
         QString mode = "auto";
         // extra
+        QJsonObject rawExtra;
         QStringList headers;
         QString xPaddingBytes;
+        bool xPaddingObfsMode = false;
+        QString xPaddingKey;
+        QString xPaddingHeader;
+        QString xPaddingPlacement;
+        QString xPaddingMethod;
+        QString uplinkHTTPMethod;
+        QString sessionPlacement;
+        QString sessionKey;
+        QString seqPlacement;
+        QString seqKey;
+        QString uplinkDataPlacement;
+        QString uplinkDataKey;
+        QString uplinkChunkSize;
         bool noGRPCHeader = false;
-        QString scMaxEachPostBytes; // packet-up only
-        QString scMinPostsIntervalMs; // packet-up only
+        bool noSSEHeader = false;
+        QString scMaxEachPostBytes;
+        QString scMinPostsIntervalMs;
+        long long scMaxBufferedPosts;
+        QString scStreamUpServerSecs;
+        int serverMaxHeaderBytes;
         // extra/xmux
+        QJsonObject rawXmux;
         QString maxConcurrency;
         QString maxConnections;
         QString cMaxReuseTimes;
@@ -60,6 +83,7 @@ namespace Configs {
         bool ParseExtraJson(QString str);
         bool ParseFromLink(const QString& link) override;
         bool ParseFromJson(const QJsonObject& object) override;
+        bool ParseFromClash(const clash::Proxies& object) override;
         QString ExportToLink() override;
         QJsonObject ExportToJson() override;
         BuildResult Build() override;

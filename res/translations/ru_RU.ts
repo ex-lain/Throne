@@ -2,143 +2,6 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ru_RU">
 <context>
-    <name>QObject</name>
-    <message>
-        <source>Request with proxy but no profile started.</source>
-        <translation>Запрос через прокси, но профиль не запущен.</translation>
-    </message>
-    <message>
-        <source>Could not open file.</source>
-        <translation>Не удалось открыть файл.</translation>
-    </message>
-    <message>
-        <source>Proxy: %1
-Direct: %2</source>
-        <translation>Прокси: %1
-Напрямую: %2</translation>
-    </message>
-    <message>
-        <source>Add profiles to this group</source>
-        <translation>Добавить профили в эту группу</translation>
-    </message>
-    <message>
-        <source>Create new subscription group</source>
-        <translation>Создать новую группу подписки</translation>
-    </message>
-    <message>
-        <source>url detected</source>
-        <translation>Обнаружен URL</translation>
-    </message>
-    <message>
-        <source>%1
-How to update?</source>
-        <translation>%1
-Как обновить?</translation>
-    </message>
-    <message>
-        <source>Requesting subscription: %1</source>
-        <translation>Запрос подписки: %1</translation>
-    </message>
-    <message>
-        <source>Requesting subscription %1 error: %2</source>
-        <translation>Ошибка запроса подписки %1: %2</translation>
-    </message>
-    <message>
-        <source>Subscription request fininshed: %1</source>
-        <translation>Запрос подписки завершён: %1</translation>
-    </message>
-    <message>
-        <source>Clearing servers...</source>
-        <translation>Очистка серверов...</translation>
-    </message>
-    <message>
-        <source>Processing subscription data...</source>
-        <translation>Идёт обработка данных подписки...</translation>
-    </message>
-    <message>
-        <source>Process complete, applying...</source>
-        <translation>Процесс завершён, применение...</translation>
-    </message>
-    <message>
-        <source>Added %1 profiles:
-%2
-Deleted %3 Profiles:
-%4</source>
-        <translation>Добавлено %1 профилей:
-%2
-Удалено %3 профилей:
-%4</translation>
-    </message>
-    <message>
-        <source>Nothing</source>
-        <translation>Ничего</translation>
-    </message>
-    <message>
-        <source>Change of %1:</source>
-        <translation>Изменение %1:</translation>
-    </message>
-    <message>
-        <source>Core exited, cleaning up...</source>
-        <translation>Ядро завершило работу, очистка...</translation>
-    </message>
-    <message>
-        <source>Core exits too frequently, stop automatic restart this profile.</source>
-        <translation>Ядро слишком часто останавливается, отмена автоматического перезапуска этого профиля.</translation>
-    </message>
-    <message>
-        <source>Restarting the core ...</source>
-        <translation>Перезапуск ядра...</translation>
-    </message>
-    <message>
-        <source>Download Profiles</source>
-        <translation>Скачать профили</translation>
-    </message>
-    <message>
-        <source>Requesting profile error: %1</source>
-        <translation>Ошибка запроса профиля: %1</translation>
-    </message>
-    <message>
-        <source>Update</source>
-        <translation>Обновление</translation>
-    </message>
-    <message>
-        <source>Not official support platform</source>
-        <translation>Платформа официально не поддерживается</translation>
-    </message>
-    <message>
-        <source>Requesting update error: %1</source>
-        <translation>Ошибка запроса обновления: %1</translation>
-    </message>
-    <message>
-        <source>No update</source>
-        <translation>Обновлений нет</translation>
-    </message>
-    <message>
-        <source>Update found: %1
-Release note:
-%2</source>
-        <translation>Найдено обновление: %1
-Список изменений:
-%2</translation>
-    </message>
-    <message>
-        <source>Open in browser</source>
-        <translation>Открыть в браузере</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>Закрыть</translation>
-    </message>
-    <message>
-        <source>Update is ready, restart to install?</source>
-        <translation>Обновление готово, перезапустить программу для установки?</translation>
-    </message>
-    <message>
-        <source>Select</source>
-        <translation>Выбор</translation>
-    </message>
-</context>
-<context>
     <name>DialogBasicSettings</name>
     <message>
         <source>Basic Settings</source>
@@ -171,10 +34,6 @@ Release note:
     <message>
         <source>Simple Download URL</source>
         <translation>URL для простого теста скачивания</translation>
-    </message>
-    <message>
-        <source>Concurrent</source>
-        <translation>Кол-во потоков</translation>
     </message>
     <message>
         <source>Disable tray</source>
@@ -285,10 +144,6 @@ Release note:
         <translation>Ядро Xray</translation>
     </message>
     <message>
-        <source>Loglevel</source>
-        <translation>Уровень логирования</translation>
-    </message>
-    <message>
         <source>Mux Concurrency</source>
         <translation>Кол-во одновременных соединений (mux)</translation>
     </message>
@@ -329,12 +184,100 @@ Release note:
         <translation>Автоматическое обновление</translation>
     </message>
     <message>
+        <source>Inbound Username</source>
+        <translation>Логин для входящих</translation>
+    </message>
+    <message>
+        <source>Inbound Password</source>
+        <translation>Пароль для входящих</translation>
+    </message>
+    <message>
+        <source>Enable Authorization</source>
+        <translation>Включить авторизацию</translation>
+    </message>
+    <message>
+        <source>Disable Mixed Inbound</source>
+        <translation>Отключить смешанный входящий порт</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use proxy for subscription request, update request etc&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Использовать прокси для обновления подписок, запросов на обновление и т. д.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Testing</source>
+        <translation>Проверка</translation>
+    </message>
+    <message>
+        <source>Concurrency</source>
+        <translation>Кол-во потоков</translation>
+    </message>
+    <message>
+        <source>Logging</source>
+        <translation>Логирование</translation>
+    </message>
+    <message>
+        <source>Auto-scroll log</source>
+        <translation>Авто-скролл логов</translation>
+    </message>
+    <message>
+        <source>Sing-box Log level</source>
+        <translation>Уровень логирования Sing-box</translation>
+    </message>
+    <message>
+        <source>Xray Log level</source>
+        <translation>Уровень логирования Xray</translation>
+    </message>
+    <message>
+        <source>Log Filtering</source>
+        <translation>Фильтрация логов</translation>
+    </message>
+    <message>
+        <source>Include Keywords</source>
+        <translation>Ключевые слова (включая)</translation>
+    </message>
+    <message>
+        <source>Include Regex</source>
+        <translation>Регулярные выражения (включая)</translation>
+    </message>
+    <message>
+        <source>Enable Include Rules</source>
+        <translation>Использовать правила включения</translation>
+    </message>
+    <message>
+        <source>Enable Exclude Rules</source>
+        <translation>Использовать правила исключения</translation>
+    </message>
+    <message>
+        <source>Exclude Keywords</source>
+        <translation>Ключевые слова (исключая)</translation>
+    </message>
+    <message>
+        <source>Exclude Regex</source>
+        <translation>Регулярные выражения (исключая)</translation>
+    </message>
+    <message>
         <source>Interval (minute, invalid if less than 30)</source>
         <translation>Интервал (в минутах; неверно, если значение меньше 30)</translation>
     </message>
     <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When enabled, If the currently active profile needs to be removed, it will be stopped and removed, otherwise it will not be removed at all&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Если включено, активный профиль будет остановлен и удален только в том случае, если это необходимо; в противном случае он не будет удален&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Allow stopping the active profile</source>
+        <translation>Разрешить остановку активного профиля</translation>
+    </message>
+    <message>
         <source>Disable Traffic Stats</source>
         <translation>Отключить статистику трафика</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A DNS server for local use will be deployed on this port&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;На этом порту будет запущен DNS-сервер для локального использования&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>DNS Server Port</source>
+        <translation>Порт DNS-сервера</translation>
     </message>
     <message>
         <source>NTP Settings</source>
@@ -455,10 +398,6 @@ Release note:
     <message>
         <source>Network Settings</source>
         <translation>Настройки соединения</translation>
-    </message>
-    <message>
-        <source>Test Settings</source>
-        <translation>Настройки тестирования</translation>
     </message>
     <message>
         <source>Only Country</source>
@@ -707,6 +646,14 @@ Release note:
         <translation>Заголовки</translation>
     </message>
     <message>
+        <source>EarlyData Length</source>
+        <translation>Длина EarlyData</translation>
+    </message>
+    <message>
+        <source>Multi Mode</source>
+        <translation>Мульти-режим</translation>
+    </message>
+    <message>
         <source>Max Concurrency</source>
         <translation>Макс. одновр. соединений</translation>
     </message>
@@ -753,6 +700,18 @@ Release note:
     <message>
         <source>Download Settings</source>
         <translation>Настройки скачивания</translation>
+    </message>
+    <message>
+        <source>XHTTP Parameters</source>
+        <translation>Параметры XHTTP</translation>
+    </message>
+    <message>
+        <source>Padding Obfuscation</source>
+        <translation>Обфускация padding</translation>
+    </message>
+    <message>
+        <source>XMUX</source>
+        <translation>XMUX</translation>
     </message>
     <message>
         <source>Max Connections</source>
@@ -850,6 +809,200 @@ Release note:
         <source>Reality short id. Accept only one value.</source>
         <translation>Reality short id. Принимает только одно значение.</translation>
     </message>
+    <message>
+        <source>JSON: %1
+%2</source>
+        <translation>JSON: %1
+%2</translation>
+    </message>
+    <message>
+        <source>XHTTP mode: auto usually uses packet-up, REALITY uses stream-one, and REALITY with downloadSettings uses stream-up. downloadSettings is removed when saving stream-one mode.</source>
+        <translation>Режим XHTTP: auto обычно использует packet-up, для REALITY используется stream-one, а при downloadSettings переключается на stream-up. При сохранении stream-one параметр downloadSettings удаляется.</translation>
+    </message>
+    <message>
+        <source>Range of extra XHTTP padding bytes. Default: 100-1000. If set, both bounds must be positive.</source>
+        <translation>Диапазон дополнительных байтов заполнения XHTTP. По умолчанию: 100-1000. Если поле задано, обе границы должны быть положительными.</translation>
+    </message>
+    <message>
+        <source>Server Max Header Bytes</source>
+        <translation>Макс. размер заголовков сервера</translation>
+    </message>
+    <message>
+        <source>Maximum request header size accepted by the server. Default: 8192.</source>
+        <translation>Максимальный размер заголовков запроса, принимаемый сервером. По умолчанию: 8192.</translation>
+    </message>
+    <message>
+        <source>Enable Padding Obfuscation</source>
+        <translation>Включить обфускацию padding</translation>
+    </message>
+    <message>
+        <source>Enable custom X-Padding placement, key, header, and method. When disabled, the client uses Referer?...x_padding and the server uses X-Padding.</source>
+        <translation>Включает настраиваемые placement, key, header и method для X-Padding. Если выключено, клиент использует Referer?...x_padding, а сервер использует X-Padding.</translation>
+    </message>
+    <message>
+        <source>Padding Method</source>
+        <translation>Метод padding</translation>
+    </message>
+    <message>
+        <source>Padding value format: repeat-x or tokenish. Default: repeat-x.</source>
+        <translation>Формат значения padding: repeat-x или tokenish. По умолчанию: repeat-x.</translation>
+    </message>
+    <message>
+        <source>Padding Placement</source>
+        <translation>Размещение padding</translation>
+    </message>
+    <message>
+        <source>Where X-Padding is sent: queryInHeader, cookie, header, or query. Default: queryInHeader.</source>
+        <translation>Куда отправляется X-Padding: queryInHeader, cookie, header или query. По умолчанию: queryInHeader.</translation>
+    </message>
+    <message>
+        <source>Padding Key</source>
+        <translation>Ключ padding</translation>
+    </message>
+    <message>
+        <source>Query or cookie key for X-Padding, and query key inside queryInHeader. Default: x_padding.</source>
+        <translation>Ключ query или cookie для X-Padding, а также query-ключ внутри queryInHeader. По умолчанию: x_padding.</translation>
+    </message>
+    <message>
+        <source>Padding Header</source>
+        <translation>Заголовок padding</translation>
+    </message>
+    <message>
+        <source>Header name used by header or queryInHeader padding. Default: X-Padding.</source>
+        <translation>Имя заголовка для padding через header или queryInHeader. По умолчанию: X-Padding.</translation>
+    </message>
+    <message>
+        <source>Packet-up upload POST size: client split size and server reject limit. Default: 1000000.</source>
+        <translation>Размер upload POST для packet-up: размер разделения на клиенте и лимит отклонения на сервере. По умолчанию: 1000000.</translation>
+    </message>
+    <message>
+        <source>Packet-up client interval between upload POST requests per proxied connection, in milliseconds. Default: 30.</source>
+        <translation>Интервал клиента packet-up между upload POST-запросами на одно проксируемое соединение, в миллисекундах. По умолчанию: 30.</translation>
+    </message>
+    <message>
+        <source>Max Buffered Posts</source>
+        <translation>Макс. буферизованных POST</translation>
+    </message>
+    <message>
+        <source>Packet-up server upload queue size per proxied connection. Default: 30.</source>
+        <translation>Размер очереди upload на сервере packet-up для одного проксируемого соединения. По умолчанию: 30.</translation>
+    </message>
+    <message>
+        <source>Uplink HTTP Method</source>
+        <translation>HTTP-метод uplink</translation>
+    </message>
+    <message>
+        <source>HTTP method for upload requests. Default: POST. Xray uppercases it; GET is accepted only in packet-up mode.</source>
+        <translation>HTTP-метод upload-запросов. По умолчанию: POST. Xray переводит значение в верхний регистр; GET принимается только в режиме packet-up.</translation>
+    </message>
+    <message>
+        <source>Uplink Data Placement</source>
+        <translation>Размещение данных uplink</translation>
+    </message>
+    <message>
+        <source>Where upload data is placed. Default: auto. cookie/header are accepted only in packet-up mode; auto/body are always accepted.</source>
+        <translation>Куда помещаются upload-данные. По умолчанию: auto. cookie/header принимаются только в режиме packet-up; auto/body принимаются всегда.</translation>
+    </message>
+    <message>
+        <source>Uplink Data Key</source>
+        <translation>Ключ данных uplink</translation>
+    </message>
+    <message>
+        <source>Key used when upload data is placed in a cookie or header. Defaults: X-Data for auto/header, x_data for cookie.</source>
+        <translation>Ключ, используемый при размещении upload-данных в cookie или header. По умолчанию: X-Data для auto/header, x_data для cookie.</translation>
+    </message>
+    <message>
+        <source>Uplink Chunk Size</source>
+        <translation>Размер фрагмента uplink</translation>
+    </message>
+    <message>
+        <source>Packet-up header/cookie payload chunk size range. Defaults: cookie 2-3 KiB, header 3-4 KB, otherwise scMaxEachPostBytes. Values below 64 are clamped.</source>
+        <translation>Диапазон размера фрагмента payload для header/cookie в packet-up. По умолчанию: cookie 2-3 КиБ, header 3-4 КБ, иначе scMaxEachPostBytes. Значения ниже 64 ограничиваются.</translation>
+    </message>
+    <message>
+        <source>Client-side stream-up/stream-one option: do not add Content-Type: application/grpc to upload requests.</source>
+        <translation>Клиентская опция stream-up/stream-one: не добавлять Content-Type: application/grpc в upload-запросы.</translation>
+    </message>
+    <message>
+        <source>No SSE Headers</source>
+        <translation>Без заголовков SSE</translation>
+    </message>
+    <message>
+        <source>Server-side downstream/stream-one option: do not send Content-Type: text/event-stream in responses.</source>
+        <translation>Серверная опция downstream/stream-one: не отправлять Content-Type: text/event-stream в ответах.</translation>
+    </message>
+    <message>
+        <source>Stream Up Server Seconds</source>
+        <translation>Время stream-up на сервере</translation>
+    </message>
+    <message>
+        <source>Stream-up server interval for periodic xPaddingBytes keepalive writes, in seconds. Default: 20-80; values &lt;= 0 disable periodic padding.</source>
+        <translation>Серверный интервал stream-up для периодических keepalive-записей xPaddingBytes, в секундах. По умолчанию: 20-80; значения &lt;= 0 отключают периодический padding.</translation>
+    </message>
+    <message>
+        <source>Session Placement</source>
+        <translation>Размещение session ID</translation>
+    </message>
+    <message>
+        <source>Where the XHTTP session id is sent: path, cookie, header, or query. Default: path.</source>
+        <translation>Куда отправляется XHTTP session id: path, cookie, header или query. По умолчанию: path.</translation>
+    </message>
+    <message>
+        <source>Session Key</source>
+        <translation>Ключ session ID</translation>
+    </message>
+    <message>
+        <source>Key used for the session id outside path placement. Defaults: x_session for cookie/query, X-Session for header.</source>
+        <translation>Ключ для session id при размещении не через path. По умолчанию: x_session для cookie/query, X-Session для header.</translation>
+    </message>
+    <message>
+        <source>Sequence Placement</source>
+        <translation>Размещение sequence</translation>
+    </message>
+    <message>
+        <source>Where the XHTTP packet sequence is sent: path, cookie, header, or query. Default: path.</source>
+        <translation>Куда отправляется sequence пакета XHTTP: path, cookie, header или query. По умолчанию: path.</translation>
+    </message>
+    <message>
+        <source>Sequence Key</source>
+        <translation>Ключ sequence</translation>
+    </message>
+    <message>
+        <source>Key used for the sequence value outside path placement. Defaults: x_seq for cookie/query, X-Seq for header.</source>
+        <translation>Ключ для sequence при размещении не через path. По умолчанию: x_seq для cookie/query, X-Seq для header.</translation>
+    </message>
+    <message>
+        <source>Client-side H2/H3 xmux limit: maximum concurrent uses per underlying connection. Cannot be used together with maxConnections. Empty xmux defaults to 1-1.</source>
+        <translation>Клиентский лимит xmux для H2/H3: максимум одновременных использований одного нижележащего соединения. Нельзя использовать вместе с maxConnections. Пустой xmux по умолчанию: 1-1.</translation>
+    </message>
+    <message>
+        <source>Client-side H2/H3 xmux limit: maximum parallel underlying connections. Cannot be used together with maxConcurrency.</source>
+        <translation>Клиентский лимит xmux для H2/H3: максимум параллельных нижележащих соединений. Нельзя использовать вместе с maxConcurrency.</translation>
+    </message>
+    <message>
+        <source>Client-side H2/H3 xmux limit: maximum times an underlying connection may be selected for reuse.</source>
+        <translation>Клиентский лимит xmux для H2/H3: максимум выборов нижележащего соединения для переиспользования.</translation>
+    </message>
+    <message>
+        <source>Client-side H2/H3 xmux limit: maximum upload/download requests per underlying connection. Empty xmux defaults to 600-900.</source>
+        <translation>Клиентский лимит xmux для H2/H3: максимум upload/download-запросов на одно нижележащее соединение. Пустой xmux по умолчанию: 600-900.</translation>
+    </message>
+    <message>
+        <source>Client-side H2/H3 xmux limit: maximum seconds an underlying connection stays reusable. Empty xmux defaults to 1800-3000.</source>
+        <translation>Клиентский лимит xmux для H2/H3: максимум секунд, пока нижележащее соединение остается переиспользуемым. Пустой xmux по умолчанию: 1800-3000.</translation>
+    </message>
+    <message>
+        <source>Client-side H2/H3 keepalive interval for underlying connections, in seconds. 0 uses Xray defaults; negative values disable keepalive where supported.</source>
+        <translation>Клиентский интервал keepalive для нижележащих H2/H3-соединений, в секундах. 0 использует значения Xray по умолчанию; отрицательные значения отключают keepalive там, где это поддерживается.</translation>
+    </message>
+    <message>
+        <source>Client-only downstream streamSettings, including address and port, for an independent download path. Not allowed in stream-one and removed when saving stream-one mode.</source>
+        <translation>Клиентские downstream streamSettings, включая адрес и порт, для независимого пути скачивания. Не разрешено в stream-one и удаляется при сохранении режима stream-one.</translation>
+    </message>
+    <message>
+        <source>XHTTP maxConnections cannot be specified together with maxConcurrency.</source>
+        <translation>В XHTTP нельзя одновременно указывать maxConnections и maxConcurrency.</translation>
+    </message>
 </context>
 <context>
     <name>DialogHotkey</name>
@@ -932,6 +1085,54 @@ Release note:
         <translation>Анализ трафика (сниффинг)</translation>
     </message>
     <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Used as default strategy when resolving outbound/dns server Domain addresses&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Используется как стратегия по умолчанию при разрешении доменных адресов для исходящих соединений и DNS-серверов&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Default Domain Strategy</source>
+        <translation>Стратегия доменов по умолчанию</translation>
+    </message>
+    <message>
+        <source>Resolve Domain Strategy</source>
+        <translation>Стратегия разрешения доменов</translation>
+    </message>
+    <message>
+        <source>Warp</source>
+        <translation>Warp</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables the following config to be used as egress, useful for bypassing services restrciting non-warp VPNs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Позволяет использовать данную конфигурацию в качестве выхода (egress); полезно для обхода сервисов, блокирующих обычные VPN (кроме Warp)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Enable Warp</source>
+        <translation>Включить Warp</translation>
+    </message>
+    <message>
+        <source>Endpoint</source>
+        <translation>Конечная точка (Endpoint)</translation>
+    </message>
+    <message>
+        <source>Private Key</source>
+        <translation>Приватный ключ</translation>
+    </message>
+    <message>
+        <source>Public Key</source>
+        <translation>Публичный ключ</translation>
+    </message>
+    <message>
+        <source>Interface Addresses</source>
+        <translation>Адреса интерфейса</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Gets a new config from cloudflare API&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Получить новую конфигурацию через Cloudflare API&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Generate Warp Config</source>
+        <translation>Сгенерировать конфиг Warp</translation>
+    </message>
+    <message>
         <source>DNS</source>
         <translation>DNS</translation>
     </message>
@@ -942,6 +1143,14 @@ Release note:
     <message>
         <source>Direct DNS</source>
         <translation>DNS для прямых запросов</translation>
+    </message>
+    <message>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When enabled, domains destined for direct outbound will also be resolved using direct dns&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Если включено, домены, идущие через прямое соединение (Direct), также будут разрешаться через прямой DNS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <source>Enable DNS Routing</source>
+        <translation>Включить DNS-маршрутизацию</translation>
     </message>
     <message>
         <source>Query Strategy</source>
@@ -1010,14 +1219,6 @@ For more information, see the document &quot;Configuration/DNS&quot;.</source>
     <message>
         <source>Delete</source>
         <translation>Удалить</translation>
-    </message>
-    <message>
-        <source>Outbound Domain Strategy</source>
-        <translation>Стратегия доменов (исходящая/outbound)</translation>
-    </message>
-    <message>
-        <source>Inbound Domain Strategy</source>
-        <translation>Стратегия доменов (входящая/inbound)</translation>
     </message>
     <message>
         <source>Enable FakeIP</source>
@@ -1110,10 +1311,6 @@ For more information, see the document &quot;Configuration/DNS&quot;.</source>
     <message>
         <source>Allow Lan to Connect</source>
         <translation>Разрешить подключения из локальной сети</translation>
-    </message>
-    <message>
-        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Resolve domains to IP before connect, also affects the server address as well&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Преобразовывать домены в IP-адреса перед подключением, также затрагивает адреса серверов&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;examples:&lt;br/&gt;tls://8.8.8.8&lt;br/&gt;https://domain/path&lt;/p&gt;&lt;p&gt;tcp://8.8.8.8:1234&lt;/p&gt;&lt;p&gt;dhcp://auto&lt;/p&gt;&lt;p&gt;h3://domain/path&lt;/p&gt;&lt;p&gt;quic://domain:4632&lt;/p&gt;&lt;p&gt;etc&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
@@ -1483,6 +1680,64 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     </message>
 </context>
 <context>
+    <name>EditJuicity</name>
+    <message>
+        <source>Form</source>
+        <translation>Форма</translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>Пароль</translation>
+    </message>
+    <message>
+        <source>UUID</source>
+        <translation>UUID</translation>
+    </message>
+</context>
+<context>
+    <name>EditNaive</name>
+    <message>
+        <source>Form</source>
+        <translation>Форма</translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>Пароль</translation>
+    </message>
+    <message>
+        <source>UDP over TCP</source>
+        <translation>UDP поверх TCP</translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation>Имя пользователя</translation>
+    </message>
+    <message>
+        <source>bbr</source>
+        <translation>BBR</translation>
+    </message>
+    <message>
+        <source>bbr2</source>
+        <translation>BBR 2</translation>
+    </message>
+    <message>
+        <source>cubic</source>
+        <translation>CUBIC</translation>
+    </message>
+    <message>
+        <source>reno</source>
+        <translation>Reno</translation>
+    </message>
+    <message>
+        <source>Congestion Control</source>
+        <translation>Контроль перегрузки</translation>
+    </message>
+    <message>
+        <source>QUIC</source>
+        <translation>QUIC</translation>
+    </message>
+</context>
+<context>
     <name>EditSSH</name>
     <message>
         <source>EditSSH</source>
@@ -1546,6 +1801,33 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>Plugin Args</source>
         <translation>Аргументы</translation>
+    </message>
+</context>
+<context>
+    <name>EditShadowTLS</name>
+    <message>
+        <source>Form</source>
+        <translation>Форма</translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>Пароль</translation>
+    </message>
+    <message>
+        <source>1</source>
+        <translation>1</translation>
+    </message>
+    <message>
+        <source>2</source>
+        <translation>2</translation>
+    </message>
+    <message>
+        <source>3</source>
+        <translation>3</translation>
+    </message>
+    <message>
+        <source>Version</source>
+        <translation>Версия</translation>
     </message>
 </context>
 <context>
@@ -1643,6 +1925,57 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>Password</source>
         <translation>Пароль</translation>
+    </message>
+</context>
+<context>
+    <name>EditTrustTunnel</name>
+    <message>
+        <source>Form</source>
+        <translation>Форма</translation>
+    </message>
+    <message>
+        <source>Password</source>
+        <translation>Пароль</translation>
+    </message>
+    <message>
+        <source>Health Check</source>
+        <translation>Проверка доступности (Health Check)</translation>
+    </message>
+    <message>
+        <source>Username</source>
+        <translation>Имя пользователя</translation>
+    </message>
+    <message>
+        <source>bbr</source>
+        <translation>BBR</translation>
+    </message>
+    <message>
+        <source>cubic</source>
+        <translation>CUBIC</translation>
+    </message>
+    <message>
+        <source>reno</source>
+        <translation>Reno</translation>
+    </message>
+    <message>
+        <source>bbr_standard</source>
+        <translation>BBR Standard</translation>
+    </message>
+    <message>
+        <source>bbr2</source>
+        <translation>BBR v2</translation>
+    </message>
+    <message>
+        <source>bbr_variant</source>
+        <translation>Вариант BBR</translation>
+    </message>
+    <message>
+        <source>Congestion Control</source>
+        <translation>Контроль перегрузки</translation>
+    </message>
+    <message>
+        <source>QUIC</source>
+        <translation>QUIC</translation>
     </message>
 </context>
 <context>
@@ -1791,50 +2124,6 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>Persistent Keepalive</source>
         <translation>Поддержание активности (Persistent Keepalive)</translation>
-    </message>
-    <message>
-        <source>Enable</source>
-        <translation>Вкл.</translation>
-    </message>
-    <message>
-        <source>Junk Packet Count</source>
-        <translation>Кол-во мусорных пакетов</translation>
-    </message>
-    <message>
-        <source>Junk Packet Min Size</source>
-        <translation>Мин. размер мусорного пакета</translation>
-    </message>
-    <message>
-        <source>Junk Packet Max Size</source>
-        <translation>Макс. размер мусорного пакета</translation>
-    </message>
-    <message>
-        <source>Init Packet Junk Size</source>
-        <translation>Размер начального мусорного пакета</translation>
-    </message>
-    <message>
-        <source>Response Packet Junk Size</source>
-        <translation>Размер ответного мусорного пакета</translation>
-    </message>
-    <message>
-        <source>Init Packet Magic Header</source>
-        <translation>Магический заголовок (Magic Header) начального пакета</translation>
-    </message>
-    <message>
-        <source>Response Packet Magic Header</source>
-        <translation>Магический заголовок (Magic Header) начального пакета</translation>
-    </message>
-    <message>
-        <source>Underload Packet Magic Header</source>
-        <translation>Магический заголовок (Magic Header) пакета перегрузки</translation>
-    </message>
-    <message>
-        <source>Transport Header Magic Header</source>
-        <translation>Магический заголовок (Magic Header) транспортного заголовка</translation>
-    </message>
-    <message>
-        <source>Amnezia Settings</source>
-        <translation>Настройки Amnezia</translation>
     </message>
 </context>
 <context>
@@ -2029,15 +2318,7 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Добавить профиль из буфера обмена</translation>
     </message>
     <message>
-        <source>Return</source>
-        <translation>Назад</translation>
-    </message>
-    <message>
         <source>Delete</source>
-        <translation>Удалить</translation>
-    </message>
-    <message>
-        <source>Del</source>
         <translation>Удалить</translation>
     </message>
     <message>
@@ -2055,10 +2336,6 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>Clear Test Result</source>
         <translation>Очистить результат теста</translation>
-    </message>
-    <message>
-        <source>Export %1 config</source>
-        <translation>Экспортировать конфигурацию %1</translation>
     </message>
     <message>
         <source>Reset Traffic</source>
@@ -2163,6 +2440,14 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>Refresh Column Widths</source>
         <translation>Обновить ширину колонок</translation>
+    </message>
+    <message>
+        <source>Export Xray config</source>
+        <translation>Экспортировать конфиг Xray</translation>
+    </message>
+    <message>
+        <source>Copy Test Result</source>
+        <translation>Копировать результат теста</translation>
     </message>
     <message>
         <source>Error</source>
@@ -2325,16 +2610,8 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Тест задержки выбранного профиля</translation>
     </message>
     <message>
-        <source>Ctrl+Shift+S</source>
-        <translation>Ctrl+Shift+S</translation>
-    </message>
-    <message>
         <source>Url Test Group</source>
         <translation>Тест задержки всей группы</translation>
-    </message>
-    <message>
-        <source>Ctrl+Shift+G</source>
-        <translation>Ctrl+Shift+G</translation>
     </message>
     <message>
         <source>Hidden menu</source>
@@ -2349,10 +2626,6 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Удалить недействительные</translation>
     </message>
     <message>
-        <source>Ctrl+Alt+I</source>
-        <translation>Ctrl+Alt+I</translation>
-    </message>
-    <message>
         <source>If you have trouble starting VPN, you can force reset Core process here and then try starting the profile again. The error is %1</source>
         <translation>Если у вас возникли проблемы с запуском режима TUN, можете принудительно сбросить процесс ядра здесь и попробовать перезапустить профиль. Ошибка: %1</translation>
     </message>
@@ -2363,6 +2636,10 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>Remove %1 Invalid item(s) ?</source>
         <translation>Удалить %1 неверных элемент(ов)?</translation>
+    </message>
+    <message>
+        <source>Enable Filter</source>
+        <translation>Включить фильтр</translation>
     </message>
     <message>
         <source>Include:</source>
@@ -2395,6 +2672,22 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>IP Out</source>
         <translation>Выходному IP</translation>
+    </message>
+    <message>
+        <source>Total</source>
+        <translation>Всего</translation>
+    </message>
+    <message>
+        <source>Downloaded</source>
+        <translation>Получено (↓)</translation>
+    </message>
+    <message>
+        <source>Uploaded</source>
+        <translation>Отправлено (↑)</translation>
+    </message>
+    <message>
+        <source> Test result(s) copied to clipboard!</source>
+        <translation>Результаты теста скопированы в буфер обмена!</translation>
     </message>
     <message>
         <source>Replace domain server addresses with their resolved IPs?</source>
@@ -2463,6 +2756,10 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>Routing Menu</source>
         <translation>Меню маршрутизации</translation>
+    </message>
+    <message>
+        <source>Export Sing-box config</source>
+        <translation>Экспортировать конфиг Sing-box</translation>
     </message>
     <message>
         <source>Open Manager</source>
@@ -2610,6 +2907,33 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <source>Add profile from File</source>
         <translation>Добавить профиль из файла</translation>
     </message>
+    <message>
+        <source>Select Server</source>
+        <translation>Выбрать сервер</translation>
+    </message>
+    <message>
+        <source>Stop: %1</source>
+        <translation>Остановить: %1</translation>
+    </message>
+</context>
+<context>
+    <name>ProfilesTableFilterHeader</name>
+    <message>
+        <source>Filter...</source>
+        <translation>Фильтр...</translation>
+    </message>
+    <message>
+        <source>Filter by country...</source>
+        <translation>Фильтр по странам...</translation>
+    </message>
+    <message>
+        <source>Disable Filter</source>
+        <translation>Выключить фильтр</translation>
+    </message>
+    <message>
+        <source>Enable Filter</source>
+        <translation>Включить фильтр</translation>
+    </message>
 </context>
 <context>
     <name>ProfilesTableModel</name>
@@ -2654,6 +2978,144 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
 </context>
 <context>
     <name>QObject</name>
+    <message>
+        <source>Request with proxy but no profile started.</source>
+        <translation>Запрос через прокси, но профиль не запущен.</translation>
+    </message>
+    <message>
+        <source>Could not open file.</source>
+        <translation>Не удалось открыть файл.</translation>
+    </message>
+    <message>
+        <source>Proxy: %1
+Direct: %2</source>
+        <translation>Прокси: %1
+Напрямую: %2</translation>
+    </message>
+    <message>
+        <source>Add profiles to this group</source>
+        <translation>Добавить профили в эту группу</translation>
+    </message>
+    <message>
+        <source>Create new subscription group</source>
+        <translation>Создать новую группу подписки</translation>
+    </message>
+    <message>
+        <source>Import HTTP proxy profile</source>
+        <translation>Импортировать профиль HTTP-прокси</translation>
+    </message>
+    <message>
+        <source>url detected</source>
+        <translation>Обнаружен URL</translation>
+    </message>
+    <message>
+        <source>%1
+How to update?</source>
+        <translation>%1
+Как обновить?</translation>
+    </message>
+    <message>
+        <source>Requesting subscription: %1</source>
+        <translation>Запрос подписки: %1</translation>
+    </message>
+    <message>
+        <source>Requesting subscription %1 error: %2</source>
+        <translation>Ошибка запроса подписки %1: %2</translation>
+    </message>
+    <message>
+        <source>Subscription request fininshed: %1</source>
+        <translation>Запрос подписки завершён: %1</translation>
+    </message>
+    <message>
+        <source>Clearing servers...</source>
+        <translation>Очистка серверов...</translation>
+    </message>
+    <message>
+        <source>Processing subscription data...</source>
+        <translation>Идёт обработка данных подписки...</translation>
+    </message>
+    <message>
+        <source>Process complete, applying...</source>
+        <translation>Процесс завершён, применение...</translation>
+    </message>
+    <message>
+        <source>Added %1 profiles:
+%2
+Deleted %3 Profiles:
+%4</source>
+        <translation>Добавлено %1 профилей:
+%2
+Удалено %3 профилей:
+%4</translation>
+    </message>
+    <message>
+        <source>Nothing</source>
+        <translation>Ничего</translation>
+    </message>
+    <message>
+        <source>Change of %1:</source>
+        <translation>Изменение %1:</translation>
+    </message>
+    <message>
+        <source>Core exited, cleaning up...</source>
+        <translation>Ядро завершило работу, очистка...</translation>
+    </message>
+    <message>
+        <source>Core exits too frequently, stop automatic restart this profile.</source>
+        <translation>Ядро слишком часто останавливается, отмена автоматического перезапуска этого профиля.</translation>
+    </message>
+    <message>
+        <source>Restarting the core ...</source>
+        <translation>Перезапуск ядра...</translation>
+    </message>
+    <message>
+        <source>Download Profiles</source>
+        <translation>Скачать профили</translation>
+    </message>
+    <message>
+        <source>Requesting profile error: %1</source>
+        <translation>Ошибка запроса профиля: %1</translation>
+    </message>
+    <message>
+        <source>Update</source>
+        <translation>Обновление</translation>
+    </message>
+    <message>
+        <source>Not official support platform</source>
+        <translation>Платформа официально не поддерживается</translation>
+    </message>
+    <message>
+        <source>Requesting update error: %1</source>
+        <translation>Ошибка запроса обновления: %1</translation>
+    </message>
+    <message>
+        <source>No update</source>
+        <translation>Обновлений нет</translation>
+    </message>
+    <message>
+        <source>Update found: %1
+Release note:
+%2</source>
+        <translation>Найдено обновление: %1
+Список изменений:
+%2</translation>
+    </message>
+    <message>
+        <source>Open in browser</source>
+        <translation>Открыть в браузере</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Закрыть</translation>
+    </message>
+    <message>
+        <source>Update is ready, restart to install?</source>
+        <translation>Обновление готово, перезапустить программу для установки?</translation>
+    </message>
+    <message>
+        <source>Select</source>
+        <translation>Выбор</translation>
+    </message>
     <message>
         <source>Chain Proxy</source>
         <translation>Цепочка прокси</translation>
@@ -2732,16 +3194,16 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
         <translation>Удалить</translation>
     </message>
     <message>
-        <source>Rule Attributes</source>
-        <translation>Атрибуты правила</translation>
+        <source>Preview</source>
+        <translation>Предпросмотр</translation>
     </message>
     <message>
-        <source>Attribute</source>
-        <translation>Атрибут</translation>
+        <source>Rule Settings</source>
+        <translation>Настройки правил</translation>
     </message>
     <message>
-        <source>Name_Placeholder</source>
-        <translation>Пример_имени</translation>
+        <source>Action</source>
+        <translation>Действие</translation>
     </message>
     <message>
         <source>Import JSON</source>
@@ -2810,6 +3272,10 @@ https://matsuridayo.github.io/n-configuration/#vpn-tun</translation>
     <message>
         <source>No valid rules are in the profile</source>
         <translation>В профиле нет доступных правил</translation>
+    </message>
+    <message>
+        <source>Check attributes to show as tabs; unchecking clears their values.</source>
+        <translation>Отметьте атрибуты, чтобы отобразить их во вкладках; снятие отметки очистит их значения.</translation>
     </message>
     <message>
         <source>Some rules could not be added, fix them before saving:

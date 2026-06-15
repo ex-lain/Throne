@@ -17,33 +17,33 @@ jobs:
         include:
           - cross_os: windows
             cross_arch: amd64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: windows
             cross_arch: arm64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: linux
             cross_arch: amd64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: linux
             cross_arch: arm64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: darwin
             cross_arch: amd64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: darwin
             cross_arch: arm64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: darwinlegacy
             cross_arch: amd64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: windowslegacy
             cross_arch: amd64
-            go_version: "1.25.9"
+            go_version: "1.26.3"
           - cross_os: windowslegacy
             cross_arch: 386
-            go_version: "1.25.9"
+            go_version: "1.26.3"
       fail-fast: false
-    runs-on: macos-latest
+    runs-on: ${{ matrix.cross_os == 'linux' && 'ubuntu-22.04' || 'macos-latest' }}
     env:
       DEST: ${{ github.workspace }}/deployment/${{ matrix.cross_os }}-${{ matrix.cross_arch }}
     steps:
@@ -76,8 +76,29 @@ jobs:
       - name: Installing protoc-gen-go
         if: steps.cache-common.outputs.cache-hit != 'true'
         run: |
-          go install github.com/golang/protobuf/protoc-gen-go@latest
-          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+      - name: Clone cronet-go
+        if: matrix.cross_os == 'linux'
+        run: |
+          set -xeuo pipefail
+          git init ~/cronet-go
+          git -C ~/cronet-go remote add origin https://github.com/parhelia512/cronet-go.git
+          git -C ~/cronet-go fetch --depth=1 origin "9ed95366ae2f9b4b994cf54f8f9de0d8bc350057"
+          git -C ~/cronet-go checkout FETCH_HEAD
+          git -C ~/cronet-go submodule update --init --recursive --depth=1
+      - name: Download Chromium toolchain
+        if: matrix.cross_os == 'linux'
+        run: |
+          set -xeuo pipefail
+          cd ~/cronet-go
+          go run ./cmd/build-naive --target=linux/${{ matrix.cross_arch }} download-toolchain
+      - name: Set Chromium toolchain environment
+        if: matrix.cross_os == 'linux'
+        run: |
+          set -xeuo pipefail
+          cd ~/cronet-go
+          go run ./cmd/build-naive --target=linux/${{ matrix.cross_arch }} env >> $GITHUB_ENV
       - name: Build golang parts
         if: steps.cache-common.outputs.cache-hit != 'true'
         shell: bash
@@ -100,31 +121,35 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-            qt_version: "6.11.0"
+            qt_version: "6.11.1"
             target: x64
             dest_suffix: windows-amd64
           - platform: windows-11-arm
-            qt_version: "6.11.0"
+            qt_version: "6.11.1"
             target: arm64
             dest_suffix: windows-arm64
           - platform: ubuntu-22.04
-            qt_version: "6.11.0"
+            qt_version: "6.11.1"
             target: x86_64
             dest_suffix: linux-amd64
           - platform: ubuntu-22.04
             qt_version: "6.2.0"
             target: x86_64
-            dest_suffix: linux-system-qt-amd64
+            dest_suffix: linux-amd64-system-qt
           - platform: ubuntu-24.04-arm
-            qt_version: "6.11.0"
+            qt_version: "6.11.1"
             target: aarch64
             dest_suffix: linux-arm64
+          - platform: ubuntu-22.04-arm
+            qt_version: "6.2.0"
+            target: aarch64
+            dest_suffix: linux-arm64-system-qt
           - platform: macos-latest
-            qt_version: "6.11.0"
+            qt_version: "6.11.1"
             target: x86_64
             dest_suffix: darwin-amd64
           - platform: macos-latest
-            qt_version: "6.11.0"
+            qt_version: "6.11.1"
             target: arm64
             dest_suffix: darwin-arm64
           - platform: macos-latest
@@ -132,17 +157,16 @@ jobs:
             target: x86_64
             dest_suffix: darwinlegacy-amd64
           - platform: windows-latest
-            qt_version: "6.5.8"
+            qt_version: "6.2.13"
             target: x64
             dest_suffix: windowslegacy-amd64
           - platform: windows-latest
-            qt_version: "6.5.8"
+            qt_version: "6.2.13"
             target: x86
             dest_suffix: windowslegacy-386
       fail-fast: false
     runs-on: ${{ matrix.platform }}
     env:
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       INPUT_VERSION: ${{ github.event.inputs.tag }}
       DEST: ${{ github.workspace }}/deployment/${{ matrix.dest_suffix }}
       DEST_SUFFIX: ${{ matrix.dest_suffix }}
@@ -164,7 +188,7 @@ jobs:
       # ========================================================================================================= Qt Install
       - name: Install Qt
         uses: jurplel/install-qt-action@v4.3.0
-        if: "!contains(matrix.platform, 'windows')"
+        if: (!contains(matrix.platform, 'windows')) && matrix.qt_version != '6.2.0'
         with:
           version: ${{ matrix.qt_version }}
           setup-python: true
@@ -188,19 +212,11 @@ jobs:
           ninja
           cd ..
           ./script/deploy_windows.sh
-      - name: Build Installer with NSIS
-        shell: cmd
-        if: matrix.platform == 'windows-latest' && matrix.qt_version != '6.5.8'
-        run: |
-          choco install nsis
-          cp .\script\windows_installer.nsi .
-          "C:\Program Files (x86)\NSIS\makensis.exe" windows_installer.nsi
-          cp ThroneSetup.exe deployment/
       - name: Linux - Generate MakeFile and Build
         shell: bash
         if: contains( matrix.platform, 'ubuntu' ) && matrix.qt_version != '6.2.0'
         run: |
-          sudo apt update && sudo apt upgrade -y
+          sudo apt update
           mkdir build
           cd build
           curl -fLso srslist.h "https://raw.githubusercontent.com/throneproj/routeprofiles/rule-set/srslist.h"
@@ -212,6 +228,8 @@ jobs:
         shell: bash
         if: contains( matrix.platform, 'ubuntu' ) && matrix.qt_version == '6.2.0'
         run: |
+          sudo apt update
+          sudo apt install -y qt6-base-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools libqt6svg6-dev qt6-translations-l10n libglx-dev libgl1-mesa-dev
           mkdir build
           cd build
           curl -fLso srslist.h "https://raw.githubusercontent.com/throneproj/routeprofiles/rule-set/srslist.h"
@@ -259,15 +277,29 @@ jobs:
           curl -Lo - https://github.com/tcnksm/ghr/releases/download/v0.17.0/ghr_v0.17.0_linux_amd64.tar.gz | tar xzv
           mv ghr*linux_amd64/ghr .
           find . -name artifacts.tgz | xargs -n1 tar xvzf
+          ####
+          sudo apt install nsis
+          cp ./script/windows_installer.nsi .
+          makensis windows_installer.nsi
+          cp ThroneSetup.exe deployment/Throne-${{ github.event.inputs.tag }}-windows-universal-installer.exe
+          ####
           cd deployment
           mkdir debug
           ####
-          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }}
-          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-x64.deb
+          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} amd64
+          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-amd64.deb
           rm -rf Throne
           ####
-          bash ../script/pack_debian_system_qt.sh ${{ github.event.inputs.tag }}
-          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-system-qt-x64.deb
+          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} amd64 systemqt
+          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-amd64-system-qt.deb
+          rm -rf Throne
+          ####
+          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} arm64
+          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-arm64.deb
+          rm -rf Throne
+          ####
+          bash ../script/pack_debian.sh ${{ github.event.inputs.tag }} arm64 systemqt
+          mv Throne.deb Throne-${{ github.event.inputs.tag }}-debian-arm64-system-qt.deb
           rm -rf Throne
           ####
           mv linux-amd64 Throne
@@ -280,7 +312,6 @@ jobs:
           zip -9 -r Throne-${{ github.event.inputs.tag }}-linux-arm64.zip Throne
           rm -rf Throne
           ####
-          mv ThroneSetup.exe Throne-${{ github.event.inputs.tag }}-windows64-installer.exe
           mv windows-amd64 Throne
           mv Throne/Throne.pdb debug/Throne-${{ github.event.inputs.tag }}-windows-amd64.pdb
           zip -9 -r Throne-${{ github.event.inputs.tag }}-windows64.zip Throne
@@ -334,8 +365,9 @@ jobs:
           rm -rf windows-amd64
           rm -rf windows-arm64
           rm -rf linux-amd64
-          rm -rf linux-system-qt-amd64
+          rm -rf linux-amd64-system-qt
           rm -rf linux-arm64
+          rm -rf linux-arm64-system-qt
           rm -rf darwin-amd64
           rm -rf darwin-arm64
           rm -rf darwinlegacy-amd64

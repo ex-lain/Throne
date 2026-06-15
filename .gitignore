@@ -150,3 +150,9 @@ srslist.h
 /neko*.sh
 /qtsdk
 script/qt6
+
+.vs
+out
+/libs
+srslist.h
+.claude

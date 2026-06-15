@@ -246,6 +246,30 @@ namespace Configs {
         return res;
     }
 
+    QStringList RouteProfile::get_proxy_sites() {
+        auto res = QStringList();
+        for (const auto& item: Rules) {
+            if (item->outboundID == proxyID && item->action == "route") {
+                for (const auto& rset: item->rule_set) {
+                    if (rset.startsWith("geosite-")) res << QString("ruleset:" + rset);
+                }
+                for (const auto& domain: item->domain) {
+                    res << QString("domain:" + domain);
+                }
+                for (const auto& suffix: item->domain_suffix) {
+                    res << QString("suffix:" + suffix);
+                }
+                for (const auto& keyword: item->domain_keyword) {
+                    res << QString("keyword:" + keyword);
+                }
+                for (const auto& regex: item->domain_regex) {
+                    res << QString("regex:" + regex);
+                }
+            }
+        }
+        return res;
+    }
+
     QStringList RouteProfile::get_direct_ips()
     {
         auto res = QStringList();
@@ -291,7 +315,7 @@ namespace Configs {
 
     /// Возвращает указатель на поле хранения сырого текста для заданного действия
     static QString* rawTextForAction(simpleAction action, RouteProfile::RawSimpleRules& storage) {
-        if (action == direct) return &storage.direct;
+        if (action == bypass) return &storage.direct;
         if (action == block) return &storage.block;
         return &storage.proxy;
     }
@@ -308,7 +332,7 @@ namespace Configs {
             types << simpleAddressProxy;
             types << simpleProcessNameProxy;
             types << simpleProcessPathProxy;
-        } else if (action == direct) {
+        } else if (action == bypass) {
             types << simpleAddressBypass;
             types << simpleProcessNameBypass;
             types << simpleProcessPathBypass;
@@ -347,7 +371,7 @@ namespace Configs {
             types << simpleAddressProxy;
             types << simpleProcessNameProxy;
             types << simpleProcessPathProxy;
-        } else if (action == direct) {
+        } else if (action == bypass) {
             types << simpleAddressBypass;
             types << simpleProcessNameBypass;
             types << simpleProcessPathBypass;
@@ -458,17 +482,17 @@ namespace Configs {
             content.startsWith("ruleset") ||
             content.startsWith("ip")) {
             if (action == proxy) return simpleAddressProxy;
-            if (action == direct) return simpleAddressBypass;
+            if (action == bypass) return simpleAddressBypass;
             return simpleAddressBlock;
         }
         if (content.startsWith("processName")) {
             if (action == proxy) return simpleProcessNameProxy;
-            if (action == direct) return simpleProcessNameBypass;
+            if (action == bypass) return simpleProcessNameBypass;
             return simpleProcessNameBlock;
         }
         if (content.startsWith("processPath")) {
             if (action == proxy) return simpleProcessPathProxy;
-            if (action == direct) return simpleProcessPathBypass;
+            if (action == bypass) return simpleProcessPathBypass;
             return simpleProcessPathBlock;
         }
         return custom;
